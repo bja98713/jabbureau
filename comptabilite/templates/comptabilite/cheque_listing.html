@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Remise de {{ count }} Chèques (au {{ filter_date }})</h1>
+
+<form method="post">
+  {% csrf_token %}
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>Date</th><th>Banque</th><th>Porteur</th><th>Montant</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ch in cheques %}
+      <tr>
+        <td>{{ ch.date|date:"d/m/Y" }}</td>
+        <td>{{ ch.banque }}</td>
+        <td>{{ ch.porteur }}</td>
+        <td>{{ ch.montant|floatformat:0 }} €</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p><strong>Nombre de chèques :</strong> {{ count }}</p>
+  <p><strong>Somme totale :</strong> {{ total_montant|floatformat:0 }} €</p>
+
+<a href="{% url 'print_cheque_listing' %}?date={{ filter_date }}"
+  class="btn btn-primary mb-3">
+  Validation et Téléchargement des chèques (PDF)
+</a>
+</form>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    {% if error %}
+      <div class="alert alert-warning">{{ error }}</div>
+    {% else %}
+      <h2>Bordereau d'Envoi</h2>
+      <h3>Professionnel de santé : M | Gastro-Entérologie</h3>
+      <p><strong>Numéro de bordereau :</strong> {{ num_bordereau }}</p>
+      <p><strong>Date du bordereau :</strong> {{ date_bordereau }}</p>
+      <p><stong>Code Praticien : M 3 0 8 9</stong></p>
+      <p><strong>N° Destinataire : T 0 0 0 3 1 7 0</strong></p>
+      <p>-----------------------------------------------------------</p>
+      <p><strong>Nombre de factures :</strong> {{ count }}</p>
+      <p><strong>Total tiers payant :</strong> {{ total_tiers_payant }}</p>
+      <p>-----------------------------------------------------------</p>
+      <table class="table table-bordered table-striped">
+          <thead class="thead-dark">
+              <tr>
+                  <th>Numéro facture</th>
+                  <th>DN</th>
+                  <th>Nom</th>
+                  <th>Prénom</th>
+                  <th>Date facture</th>
+                  <th>Tiers payant</th>
+              </tr>
+          </thead>
+          <tbody>
+              {% for facture in factures %}
+              <tr>
+                  <td>{{ facture.numero_facture }}</td>
+                  <td>{{ facture.dn }}</td>
+                  <td>{{ facture.nom }}</td>
+                  <td>{{ facture.prenom }}</td>
+                  <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
+                  <td>{{ facture.tiers_payant }}</td>
+              </tr>
+              {% endfor %}
+          </tbody>
+      </table>
+    {% endif %}
+    <a href="{% url 'facturation_list' %}" class="btn btn-secondary">Retour à la liste des factures</a>
+    <button type="button" id="printBtn" class="btn btn-primary" onclick="window.print()">Aperçu avant validation</button>
+    {% if num_bordereau %}
+  <a href="{% url 'print_bordereau' num_bordereau %}" class="btn btn-primary">Imprimer / Enregistrer en PDF</a>
+{% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h1>Remise de Chèques du {{ date_cheque }}</h1>
+  <p><strong>Nombre de chèques :</strong> {{ count }}</p>
+  <p><strong>Total montant :</strong> {{ total_montant }}</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">
+      Valider &amp; Imprimer le PDF
+    </button>
+  </form>
+
+  <table class="table table-striped mt-3">
+    <thead>
+      <tr>
+        <th>Banque</th>
+        <th>Porteur</th>
+        <th>Montant</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ch in cheques %}
+      <tr>
+        <td>{{ ch.banque }}</td>
+        <td>{{ ch.porteur }}</td>
+        <td>{{ ch.montant }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

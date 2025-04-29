@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Synthèse Comptabilité</h1>
+
+  <form id="filter-form" method="get" class="form-inline mb-3">
+    <!-- Période -->
+    <div class="form-group mr-2">
+      <label class="mr-1">Période :</label>
+      <select name="period" class="form-control">
+        {% for key,label in period_choices %}
+          <option value="{{ key }}" {% if period == key %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Cases à cocher -->
+    <div class="form-group mr-2">
+      <label>
+        <input type="checkbox" name="group_regime"
+               {% if group_regime %}checked{% endif %}>
+        Par régime
+      </label>
+    </div>
+    <div class="form-group mr-2">
+      <label>
+        <input type="checkbox" name="group_modalite"
+               {% if group_modalite %}checked{% endif %}>
+        Par modalité
+      </label>
+    </div>
+    <div class="form-group mr-2">
+      <label>
+        <input type="checkbox" name="group_code_reel"
+               {% if group_code_reel %}checked{% endif %}>
+        Par code réel
+      </label>
+    </div>
+  </form>
+
+  {# --- Répartition par régime --- #}
+  {% if pivot_regime %}
+    <h2>Répartition par régime</h2>
+    <table class="table table-bordered text-center">
+      <thead>
+        <tr>
+          <th>Régime</th>
+          <th>Nb. factures</th>
+          <th>Total acte</th>
+          <th>Total payé</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pivot_regime %}
+          <tr>
+            <td>{{ row.regime }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.total_acte|floatformat:"0" }}</td>
+            <td>{{ row.total_paye|floatformat:"0" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="font-weight-bold">
+          <td>Total</td>
+          <td>{{ totals_regime.count }}</td>
+          <td>{{ totals_regime.total_acte|floatformat:"0" }}</td>
+          <td>{{ totals_regime.total_paye|floatformat:"0" }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  {% endif %}
+
+  {# --- Répartition par modalité --- #}
+  {% if pivot_modalite %}
+    <h2>Répartition par modalité de paiement</h2>
+    <table class="table table-bordered text-center">
+      <thead>
+        <tr>
+          <th>Modalité</th>
+          <th>Nb. factures</th>
+          <th>Total acte</th>
+          <th>Total payé</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pivot_modalite %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.total_acte|floatformat:"0" }}</td>
+            <td>{{ row.total_paye|floatformat:"0" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="font-weight-bold">
+          <td>Total</td>
+          <td>{{ totals_modalite.count }}</td>
+          <td>{{ totals_modalite.total_acte|floatformat:"0" }}</td>
+          <td>{{ totals_modalite.total_paye|floatformat:"0" }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  {% endif %}
+
+  {# --- Répartition par code réel --- #}
+  {% if pivot_code_reel %}
+    <h2>Répartition par code réel</h2>
+    <table class="table table-bordered text-center">
+      <thead>
+        <tr>
+          <th>Code réel</th>
+          <th>Nb. factures</th>
+          <th>Total acte</th>
+          <th>Total payé</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pivot_code_reel %}
+          <tr>
+            <td>{{ row.code_reel }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.total_acte|floatformat:"0" }}</td>
+            <td>{{ row.total_paye|floatformat:"0" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="font-weight-bold">
+          <td>Total</td>
+          <td>{{ totals_code_reel.count }}</td>
+          <td>{{ totals_code_reel.total_acte|floatformat:"0" }}</td>
+          <td>{{ totals_code_reel.total_paye|floatformat:"0" }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  {% endif %}
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+  // Soumission automatique dès qu’un filtre change
+  $('#filter-form').on('change', 'select, input[type=checkbox]', function(){
+    $('#filter-form').submit();
+  });
+</script>
+{% endblock %}

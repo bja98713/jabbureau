@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Listing de l'activité</h1>
+  
+  <!-- Formulaire de recherche -->
+  <form method="get" class="mb-3">
+    <fieldset class="mb-3 border p-3">
+      <legend class="w-auto px-2">Recherche par date</legend>
+      <div class="form-group">
+        <label for="id_date" class="mr-2">Date :</label>
+        <input type="text" id="id_date" name="date" class="form-control datepicker" placeholder="JJ/MM/AAAA" value="{{ date }}">
+      </div>
+    </fieldset>
+    
+    <fieldset class="mb-3 border p-3">
+      <legend class="w-auto px-2">Recherche par période</legend>
+      <div class="form-group">
+        <label for="id_start_date" class="mr-2">Début période :</label>
+        <input type="text" id="id_start_date" name="start_date" class="form-control datepicker" placeholder="JJ/MM/AAAA" value="{{ start_date }}">
+      </div>
+      <div class="form-group">
+        <label for="id_end_date" class="mr-2">Fin période :</label>
+        <input type="text" id="id_end_date" name="end_date" class="form-control datepicker" placeholder="JJ/MM/AAAA" value="{{ end_date }}">
+      </div>
+    </fieldset>
+    
+    <fieldset class="mb-3 border p-3">
+      <legend class="w-auto px-2">Recherche par année</legend>
+      <div class="form-group">
+        <label for="id_year" class="mr-2">Année :</label>
+        <input type="text" id="id_year" name="year" class="form-control" placeholder="2025" value="{{ year }}">
+      </div>
+    </fieldset>
+    
+    <button type="submit" class="btn btn-primary">Rechercher</button>
+  </form>
+  
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped">
+      <thead class="thead-dark">
+        <tr>
+          <th>Date Facture</th>
+          <th>Numéro Facture</th>
+          <th>DN</th>
+          <th>Nom</th>
+          <th>Prénom</th>
+          <th>Régime LM</th>
+          <th>Code Réel</th>
+          <th>Total Acte</th>
+          <th>TP (part CPS)</th>
+          <th>TP (part patient)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for facture in factures %}
+        <tr>
+          <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
+          <td>{{ facture.numero_facture }}</td>
+          <td>{{ facture.dn }}</td>
+          <td>{{ facture.nom }}</td>
+          <td>{{ facture.prenom }}</td>
+          <td>{% if facture.regime_lm %}oui{% else %}non{% endif %}</td>
+          <td>{{ facture.code_acte.code_reel }}</td>
+          <td>{{ facture.total_acte }}</td>
+          <td>{{ facture.tiers_payant }}</td>
+          <td>{{ facture.total_paye }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10">Aucune facture trouvée pour cette période.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="7" class="text-right">Totaux :</th>
+          <th>{{ sum_total_acte }}</th>
+          <th>{{ sum_tiers_payant }}</th>
+          <th>{{ sum_total_paye }}</th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

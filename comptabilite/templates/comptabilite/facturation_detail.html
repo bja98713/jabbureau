@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Détails de la Facturation</h1>
+  <table class="table table-bordered">
+    <tbody>
+      <tr>
+        <th>Numéro Facture</th>
+        <td>{{ facturation.numero_facture }}</td>
+      </tr>
+      <tr>
+        <th>Numéro DN</th>
+        <td>{{ facturation.dn }}</td>
+      </tr>
+      <tr>
+        <th>Nom</th>
+        <td>{{ facturation.nom }}</td>
+      </tr>
+      <tr>
+        <th>Prénom</th>
+        <td>{{ facturation.prenom }}</td>
+      </tr>
+      <tr>
+        <th>Date de Naissance</th>
+        <td>{{ facturation.date_naissance }}</td>
+      </tr>
+      <tr>
+        <th>Date de l'acte</th>
+        <td>{{ facturation.date_acte }}</td>
+      </tr>
+      <tr>
+        <th>Date de la facture</th>
+        <td>{{ facturation.date_facture }}</td>
+      </tr>
+      <tr>
+        <th>Code Acte</th>
+        <td>{{ facturation.code_acte.code_acte }}</td>
+      </tr>
+      <tr>
+        <th>Total Acte</th>
+        <td>{{ facturation.total_acte|floatformat:"0" }}</td>
+      </tr>
+      <tr>
+        <th>Tiers Payant</th>
+        <td>{{ facturation.tiers_payant| default_if_none:"" | floatformat:"0" }}</td>
+      </tr>
+      <tr>
+        <th>Total Payé</th>
+        <td>{{ facturation.total_paye|default_if_none:""|floatformat:"0" }}</td>
+      </tr>
+      <tr>
+        <th>Statut Dossier</th>
+        <td>{{ facturation.get_statut_dossier_display }}</td>
+      </tr>
+      <!-- Ajoutez d'autres champs si nécessaire -->
+    </tbody>
+  </table>
+  <div class="mt-4">
+    {% comment %} Bouton d’impression conditionnel {% endcomment %}
+{% if facturation.code_acte.parcours_soin %}
+  {# PARCOURS DE SOINS = OUI → PDF via la vue print_facture #}
+  <a href="{% url 'print_facture' facturation.pk %}" class="btn btn-primary">
+    Imprimer (PDF)
+  </a>
+{% else %}
+  {# HORS PARCOURS → on génère le n° puis impression navigateur #}
+  <button id="printBtn" class="btn btn-primary">
+    Imprimer
+  </button>
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script>
+  $(function(){
+    $('#printBtn').on('click', function(){
+      // Appel AJAX pour générer et sauver numero_facture
+      $.get("{% url 'generate_numero' facturation.pk %}", function(data){
+        // 1) Optionnel : afficher le numéro sur la page
+        if(data.numero_facture){
+          $('#numFactDisplay').remove();  // éviter les doublons
+          $('<p id="numFactDisplay">Facture n° ' + data.numero_facture + '</p>')
+            .insertBefore('table');      // ou à l’endroit souhaité
+        }
+        // 2) Lancer l’impression navigateur
+        window.print();
+      });
+    });
+  });
+  </script>
+{% endif %}
+  </div>
+</div>
+{% endblock %}
+

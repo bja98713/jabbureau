@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Bordereau PDF</title>
+  <style>
+  /* Optionnel : vos styles CSS de base pour le PDF, e.g. table, titres, etc. */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    border: 1px solid #000;
+    padding: 4px 8px;
+  }
+  </style>
+</head>
+<body>
+  <h1>Bordereau d'Envoi</h1>
+  <h1>Professionnel de santé : M | Gastro-entérologue</h1>
+  <p><strong>Numéro de bordereau :</strong> {{ num_bordereau }}</p>
+  <p><strong>Date du bordereau :</strong> {{ date_bordereau }}</p>
+  <p><strong>Code Praticien : M 3 0 8 9</strong></p>
+  <p><strong>N° Destinataire : T 0 0 0 3 1 7 0</strong></p>
+  <p>-----------------------------------------------------------</p>
+  <p><strong>Nombre de factures :</strong> {{ count }}</p>
+  <p><strong>Total tiers payant :</strong> {{ total_tiers_payant }}</p>
+  <p>-----------------------------------------------------------</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Numéro facture</th>
+        <th>DN</th>
+        <th>Nom</th>
+        <th>Prénom</th>
+        <th>Date facture</th>
+        <th>Tiers payant</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for facture in factures %}
+      <tr>
+        <td>{{ facture.numero_facture }}</td>
+        <td>{{ facture.dn }}</td>
+        <td>{{ facture.nom }}</td>
+        <td>{{ facture.prenom }}</td>
+        <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
+        <td>{{ facture.tiers_payant }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

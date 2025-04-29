@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Remise des chèques</h1>
+  <h2>Choisissez la date d'édition</h2>
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+  <form method="post" class="mb-3">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Florence, souhaites tu éditer la remise des chèques pour aujourd'hui ?</label>
+      <div class="form-check">
+        <input type="radio" class="form-check-input" id="option_today" name="date_option" value="today" checked>
+        <label class="form-check-label" for="option_today">Oui, aujourd'hui</label>
+      </div>
+      <div class="form-check">
+        <input type="radio" class="form-check-input" id="option_other" name="date_option" value="other">
+        <label class="form-check-label" for="option_other">Non, pour une autre date</label>
+      </div>
+    </div>
+    <div class="form-group" id="other_date_group" style="display:none;">
+      <label for="other_date">Choisissez la date :</label>
+      <input type="text" id="other_date" name="other_date" class="form-control datepicker" placeholder="AAAA-MM-JJ">
+      <small class="form-text text-muted">Format AAAA-MM-JJ</small>
+    </div>
+    <button type="submit" class="btn btn-primary">Valider</button>
+  </form>
+</div>
+
+<!-- Inclure jQuery et Bootstrap Datepicker avec la langue française -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.fr.min.js"></script>
+<script>
+$(document).ready(function(){
+  function toggleOtherDate() {
+    if ($('input[name="date_option"]:checked').val() === 'other') {
+      $('#other_date_group').show();
+    } else {
+      $('#other_date_group').hide();
+    }
+  }
+  
+  toggleOtherDate();
+  
+  $('input[name="date_option"]').on('change', function(){
+    toggleOtherDate();
+  });
+  
+  $('.datepicker').datepicker({
+    format: 'yyyy-mm-dd',  // Format ISO requis par la vue
+    language: 'fr',
+    autoclose: true,
+    todayHighlight: true
+  });
+});
+</script>
+{% endblock %}

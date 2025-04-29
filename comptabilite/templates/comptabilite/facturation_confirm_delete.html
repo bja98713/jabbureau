@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Supprimer la Facturation n°{{ object.numero_facture }} ?</h2>
+<p>Es tu sûr de vouloir supprimer cette fiche comptable ? Cette action est irréversible.</p>
+
+<form method="post">
+  {% csrf_token %}
+  <button type="submit">Confirmer la suppression</button>
+  <a href="{% url 'facturation_list' %}">Annuler</a>
+</form>
+{% endblock %}
