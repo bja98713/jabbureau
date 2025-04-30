@@ -24,7 +24,9 @@ from django.utils import timezone
 from datetime import timedelta
 import calendar
 
-class FacturationSearchListView(ListView):
+class FacturationSearchListView(LoginRequiredMixin, ListView):
+    login_url = 'login'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     template_name = 'comptabilite/facturation_search_list.html'
     context_object_name = 'facturations'
@@ -80,7 +82,7 @@ class FacturationListView(LoginRequiredMixin, ListView):
             today = timezone.localdate()
             qs = qs.filter(date_acte=today)
         return qs
-    
+
 # Vue de création avec le formulaire personnalisé
 import json
 from django.views.generic import CreateView
@@ -88,7 +90,9 @@ from django.urls import reverse_lazy
 from .models import Facturation, Code
 from .forms import FacturationForm
 
-class FacturationCreateView(CreateView):
+class FacturationCreateView(LoginRequiredMixin, CreateView):
+    login_url = 'login'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     form_class = FacturationForm
     template_name = 'comptabilite/facturation_form.html'
@@ -110,7 +114,9 @@ class FacturationCreateView(CreateView):
         return context
 
 # Vue de mise à jour avec le formulaire personnalisé
-class FacturationUpdateView(UpdateView):
+class FacturationUpdateView(LoginRequiredMixin, UpdateView):
+    login_url = 'login'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     form_class = FacturationForm
     template_name = 'comptabilite/facturation_form.html'
@@ -121,7 +127,9 @@ class FacturationDeleteView(DeleteView):
     template_name = 'comptabilite/facturation_confirm_delete.html'
     success_url = reverse_lazy('facturation_list')
 
-class FacturationDetailView(DetailView):
+class FacturationDetailView(LoginRequiredMixin, DetailView):
+    login_url = 'login'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     template_name = 'comptabilite/facturation_detail.html'
     context_object_name = 'facturation'
@@ -207,33 +215,33 @@ def print_facture(request, pk):
     regime_lm = ""
     if hasattr(facture, 'regime_lm'):
         regime_lm = "X" if facture.regime_lm else ""
-    
+
     # Si hors parcours de soins ET pas encore de numéro, on le génère et on enregistre
     if not facture.code_acte.parcours_soin and not facture.numero_facture:
         now = timezone.localtime()
         facture.numero_facture = now.strftime("FQ/%Y/%m/%d/%H:%M")
         facture.save()
 
-    c.drawString(2.0 * cm, hauteur - 4.3 * cm, f"{nom}")
-    c.drawString(12.5 * cm, hauteur - 4.3 * cm, f"{prenom}")
-    c.drawString(16.0 * cm, hauteur - 5.2 * cm, f"{date_naissance}")
-    c.drawString(2.0 * cm, hauteur - 5.2 * cm, f"{dn}")
+    c.drawString(2.0 * cm, hauteur - 3.7 * cm, f"{nom}")
+    c.drawString(12.5 * cm, hauteur - 3.7 * cm, f"{prenom}")
+    c.drawString(16.0 * cm, hauteur - 4.7 * cm, f"{date_naissance}")
+    c.drawString(2.0 * cm, hauteur - 4.7 * cm, f"{dn}")
     c.drawString(2.0 * cm, hauteur - 13.0 * cm, f"{nom_medecin}")
     c.drawString(2.0 * cm, hauteur - 13.5 * cm, f"{nom_clinique}")
-    c.drawString(10.0 * cm, hauteur - 12.8 * cm, f"{code_m}")
-    c.drawString(2.8 * cm, hauteur - 14.9 * cm, f"{ps}")
+    c.drawString(10.5 * cm, hauteur - 12.6 * cm, f"{code_m}")
+    c.drawString(2.5 * cm, hauteur - 14.8 * cm, f"{ps}")
     if facture.regime_lm:
-        c.drawString(0.6 * cm, hauteur - 16.7 * cm, f"{regime_lm}")
-    c.drawString(0.6 * cm, hauteur - 20.3 * cm, f"{date_facture}")
+        c.drawString(0.3 * cm, hauteur - 16.5 * cm, f"{regime_lm}")
+    c.drawString(0.5 * cm, hauteur - 20.3 * cm, f"{date_facture}")
     c.drawString(4.0 * cm, hauteur - 20.3 * cm, f"{code_acte_normal}")
-    c.drawString(7.2 * cm, hauteur - 20.3 * cm, f"{variable_1}")
+    c.drawString(7.0 * cm, hauteur - 20.3 * cm, f"{variable_1}")
     c.drawString(7.5 * cm, hauteur - 20.3 * cm, f"{modificateur}")
-    c.drawString(11.4 * cm, hauteur - 20.3 * cm, f"{variable_2}")
+    c.drawString(11.5 * cm, hauteur - 20.3 * cm, f"{variable_2}")
     c.drawString(12.5 * cm, hauteur - 20.3 * cm, f"{total_acte}")
-    c.drawString(10.0 * cm, hauteur - 23.9 * cm, f"{total_acte}")
+    c.drawString(10.0 * cm, hauteur - 24.3 * cm, f"{total_acte}")
     if facture.regime_lm:
-        c.drawString(7.5 * cm, hauteur - 27.5 * cm, f"{total_paye}")
-        c.drawString(11.5 * cm, hauteur - 27.5 * cm, f"{tiers_payant}")
+        c.drawString(7.5 * cm, hauteur - 27.6 * cm, f"{total_paye}")
+        c.drawString(11.5 * cm, hauteur - 27.6 * cm, f"{tiers_payant}")
 
     c.save()
     return response
@@ -304,8 +312,8 @@ from .models import Facturation
 
 def print_bordereau(request, num_bordereau):
     """
-    Génère un PDF pour le bordereau. 
-    Si les factures n'ont pas encore le numéro en base (aperçu), 
+    Génère un PDF pour le bordereau.
+    Si les factures n'ont pas encore le numéro en base (aperçu),
     on les sélectionne selon les mêmes critères que create_bordereau().
     Puis on enregistre numero_bordereau/date_bordereau et on génère le PDF.
     """
@@ -360,11 +368,13 @@ from django.db.models import Sum
 from .models import Facturation
 from datetime import datetime
 
-class ActivityListView(ListView):
+class ActivityListView(LoginRequiredMixin, ListView):
+    login_url = 'login'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     template_name = 'comptabilite/activity_list.html'
     context_object_name = 'factures'
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         # Récupérer les paramètres de filtre
@@ -372,7 +382,7 @@ class ActivityListView(ListView):
         start_date_str = self.request.GET.get('start_date')  # format ISO ou européen
         end_date_str = self.request.GET.get('end_date')
         year_str = self.request.GET.get('year')            # par exemple: '2025'
-        
+
         if date_str:
             # Tenter de parser en format ISO, sinon format européen
             try:
@@ -410,10 +420,10 @@ class ActivityListView(ListView):
                 queryset = queryset.filter(date_facture__year=year)
             except ValueError:
                 pass
-        
+
         # Vous pouvez ajouter d'autres filtres si nécessaire.
         return queryset.order_by('date_facture')
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Récupérer les filtres pour les réafficher (optionnel)
@@ -724,6 +734,8 @@ from datetime import timedelta
 from .models import Facturation
 
 class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
+    login_url = 'login'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     template_name = 'comptabilite/comptabilite_summary.html'
     context_object_name = 'summary_rows'

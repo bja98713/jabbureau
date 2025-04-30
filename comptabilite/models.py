@@ -26,7 +26,7 @@ class Code(models.Model):
         blank=True,
         verbose_name="Total payé"
     )
-    
+
     medecin = models.ForeignKey(
         Medecin,
         on_delete=models.SET_NULL,
@@ -34,7 +34,7 @@ class Code(models.Model):
         blank=True,
         verbose_name="Médecin"
     )
-    
+
     parcours_soin = models.BooleanField(default=False, verbose_name="Parcours de soins")
     longue_maladie = models.BooleanField(default=False, verbose_name="Longue maladie")
     code_reel = models.CharField(max_length=50, null=True, blank=True, verbose_name="Code réel")
@@ -45,7 +45,7 @@ class Code(models.Model):
         verbose_name="Variable 1",
         help_text="Vide ou 1"
     )
-    
+
     code_acte_normal = models.CharField(
         max_length=50,
         null=True,
@@ -66,7 +66,7 @@ class Code(models.Model):
         verbose_name="Modificateur",
         help_text="CS, APC ou vide"
     )
-    
+
     def __str__(self):
         return f"{self.code_acte} - {self.total_acte}xpf"
 
@@ -89,7 +89,7 @@ class Facturation(models.Model):
     date_naissance = models.DateField(
         verbose_name="Date de naissance"
     )
-    
+
     date_acte = models.DateField(
         verbose_name="Date de l'acte"
     )
@@ -221,6 +221,7 @@ class Paiement(models.Model):
         blank=True
     )
     MODALITE_CHOICES = [
+        ('-----', '-----'),
         ('CB', 'Carte Bancaire'),
         ('Chèque', 'Chèque'),
         ('Liquide', 'Liquide'),
@@ -236,7 +237,7 @@ class Paiement(models.Model):
         ('Banque de Tahiti', 'Banque de Tahiti'),
         ('Socredo', 'Socredo'),
         ('Banque de Polynésie', 'Banque de Polynésie'),
-        ('CC°', 'CCP'),
+        ('CCP', 'CCP'),
     ]
     banque = models.CharField(
         max_length=50,
@@ -263,7 +264,7 @@ class Paiement(models.Model):
 
     def __str__(self):
         return f"{self.date} – {self.montant}€ – {'Oui' if self.liste else 'Non'}"
-    
+
     def save(self, *args, **kwargs):
         # Avant de sauvegarder, on remplit la date et le montant à partir de la facture associée s'ils ne sont pas renseignés.
         if self.facture:
@@ -272,6 +273,6 @@ class Paiement(models.Model):
             if not self.montant:
                 self.montant = self.facture.total_paye
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         return f"Paiement de facture {self.facture.numero_facture} - {self.montant} xpf"
