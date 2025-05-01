@@ -256,22 +256,29 @@ from django.shortcuts import render
 from django.db.models import Q
 from .models import Facturation
 
+from datetime import date
+from django.db.models import Q
+from django.shortcuts import render
+from .models import Facturation
+
 def create_bordereau(request):
     """
-    Affiche un aperçu du bordereau sans enregistrer les champs en base.
-    Les factures concernées sont celles à tiers_payant > 0 et sans numéro de bordereau.
+    Cette vue crée un bordereau pour les factures destinées à être encaissées.
+    Tri ascendant sur numero_facture avant génération.
     """
-    # Sélectionner les factures à traiter
-    factures = Facturation.objects.filter(tiers_payant__gt=0).filter(
+    # 1) On sélectionne d'abord le QuerySet
+    qs = Facturation.objects.filter(tiers_payant__gt=0).filter(
         Q(numero_bordereau__isnull=True) | Q(numero_bordereau="")
     )
+    # 2) Puis on trie ce QuerySet
+    factures = qs.order_by('numero_facture')
 
     if not factures.exists():
         return render(request, 'comptabilite/bordereau.html', {
             'error': "Aucune facture à traiter pour le bordereau."
         })
 
-    # Génération du numéro de bordereau (aperçu)
+    # Génération du numéro de bordereau
     today = date.today()
     year = today.year
     month = today.month
@@ -279,11 +286,15 @@ def create_bordereau(request):
     day_of_year = today.timetuple().tm_yday
     num_bordereau = f"M-{year}-{month:02d}-{week:02d}-{day_of_year:03d}"
 
-    # Calculer les totaux pour l’aperçu
-    count = factures.count()
-    total_tiers_payant = sum(f.tiers_payant for f in factures)
+    # Mise à jour et calculs
+    for facture in factures:
+        facture.numero_bordereau = num_bordereau
+        facture.date_bordereau = today
+        facture.save(update_fields=['numero_bordereau', 'date_bordereau'])
 
-    # Contexte pour le template (aperçu uniquement, pas de save())
+    count = factures.count()
+    total_tiers_payant = sum(f.tiers_payant or 0 for f in factures)
+
     context = {
         'factures': factures,
         'num_bordereau': num_bordereau,
@@ -292,6 +303,7 @@ def create_bordereau(request):
         'total_tiers_payant': total_tiers_payant,
     }
     return render(request, 'comptabilite/bordereau.html', context)
+
 
 
 import tempfile
@@ -319,7 +331,8 @@ def print_bordereau(request, num_bordereau):
     """
     # 1) Retenter de récupérer celles déjà validées,
     # sinon reprendre la sélection d'aperçu
-    factures = Facturation.objects.filter(numero_bordereau=num_bordereau)
+    #factures = Facturation.objects.filter(numero_bordereau=num_bordereau)
+    factures = Facturation.objects.filter(numero_bordereau=num_bordereau).order_by('numero_facture')
     if not factures.exists():
         factures = Facturation.objects.filter(
             tiers_payant__gt=0
