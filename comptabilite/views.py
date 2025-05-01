@@ -247,127 +247,94 @@ def print_facture(request, pk):
     return response
 
 from datetime import date
-from django.shortcuts import render
-from django.db.models import Q
+from django.shortcuts import render, get_object_or_404
+from django.db.models import Q, Sum
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from weasyprint import HTML
 from .models import Facturation
 
-from datetime import date
-from django.shortcuts import render
-from django.db.models import Q
-from .models import Facturation
-
-from datetime import date
-from django.db.models import Q
-from django.shortcuts import render
-from .models import Facturation
-
+@login_required
 def create_bordereau(request):
     """
-    Cette vue crée un bordereau pour les factures destinées à être encaissées.
-    Tri ascendant sur numero_facture avant génération.
+    Aperçu des factures à bordereauter, triées par numero_facture,
+    sans rien modifier en base.
     """
-    # 1) On sélectionne d'abord le QuerySet
-    qs = Facturation.objects.filter(tiers_payant__gt=0).filter(
-        Q(numero_bordereau__isnull=True) | Q(numero_bordereau="")
+    factures = (
+        Facturation.objects
+        .filter(tiers_payant__gt=0)
+        .filter(Q(numero_bordereau__isnull=True) | Q(numero_bordereau=""))
+        .order_by('numero_facture')
     )
-    # 2) Puis on trie ce QuerySet
-    factures = qs.order_by('numero_facture')
 
     if not factures.exists():
         return render(request, 'comptabilite/bordereau.html', {
             'error': "Aucune facture à traiter pour le bordereau."
         })
 
-    # Génération du numéro de bordereau
     today = date.today()
-    year = today.year
-    month = today.month
     week = today.isocalendar()[1]
     day_of_year = today.timetuple().tm_yday
-    num_bordereau = f"M-{year}-{month:02d}-{week:02d}-{day_of_year:03d}"
-
-    # Mise à jour et calculs
-    for facture in factures:
-        facture.numero_bordereau = num_bordereau
-        facture.date_bordereau = today
-        facture.save(update_fields=['numero_bordereau', 'date_bordereau'])
-
-    count = factures.count()
-    total_tiers_payant = sum(f.tiers_payant or 0 for f in factures)
+    num_bordereau = f"M-{today.year}-{today.month:02d}-{week:02d}-{day_of_year:03d}"
 
     context = {
         'factures': factures,
         'num_bordereau': num_bordereau,
         'date_bordereau': today.strftime("%d/%m/%Y"),
-        'count': count,
-        'total_tiers_payant': total_tiers_payant,
+        'count': factures.count(),
+        'total_tiers_payant': factures.aggregate(total=Sum('tiers_payant'))['total'] or 0,
     }
     return render(request, 'comptabilite/bordereau.html', context)
 
 
-
-import tempfile
-from django.template.loader import render_to_string
-from django.http import HttpResponse
-from weasyprint import HTML
 from datetime import date
-from .models import Facturation
-
-from datetime import date
-from django.db.models import Q
-from django.shortcuts import render
+from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from weasyprint import HTML
-
 from .models import Facturation
 
 def print_bordereau(request, num_bordereau):
     """
-    Génère un PDF pour le bordereau.
-    Si les factures n'ont pas encore le numéro en base (aperçu),
-    on les sélectionne selon les mêmes critères que create_bordereau().
-    Puis on enregistre numero_bordereau/date_bordereau et on génère le PDF.
+    Valide (en base) et imprime les factures du bordereau :
+    on ne sélectionne QUE celles dont numero_bordereau est vide.
     """
-    # 1) Retenter de récupérer celles déjà validées,
-    # sinon reprendre la sélection d'aperçu
-    #factures = Facturation.objects.filter(numero_bordereau=num_bordereau)
-    factures = Facturation.objects.filter(numero_bordereau=num_bordereau).order_by('numero_facture')
-    if not factures.exists():
-        factures = Facturation.objects.filter(
-            tiers_payant__gt=0
-        ).filter(
-            Q(numero_bordereau__isnull=True) | Q(numero_bordereau="")
-        )
+    # 1) On prend exclusivement les factures à traiter
+    factures = (
+        Facturation.objects
+        .filter(tiers_payant__gt=0)
+        .filter(Q(numero_bordereau__isnull=True) | Q(numero_bordereau=""))
+        .order_by('numero_facture')
+    )
 
     if not factures.exists():
         return HttpResponse("Aucune facture à imprimer pour ce bordereau.", status=404)
 
-    # 2) Validation : on écrit enfin en base
+    # 2) On génère la date et on écrit enfin le numéro de bordereau en base
     today = date.today()
-    for facture in factures:
-        facture.numero_bordereau = num_bordereau
-        facture.date_bordereau   = today
-        facture.save(update_fields=['numero_bordereau', 'date_bordereau'])
+    for f in factures:
+        f.numero_bordereau = num_bordereau
+        f.date_bordereau   = today
+        f.save(update_fields=['numero_bordereau', 'date_bordereau'])
 
-    # 3) Préparation du contexte pour le PDF
-    count             = factures.count()
-    total_tiers       = sum(f.tiers_payant for f in factures)
+    # 3) Préparation du contexte
+    total_tiers = factures.aggregate(total=Sum('tiers_payant'))['total'] or 0
     context = {
-        'num_bordereau':    num_bordereau,
-        'date_bordereau':   today.strftime("%d/%m/%Y"),
-        'count':            count,
+        'factures':          factures,
+        'num_bordereau':     num_bordereau,
+        'date_bordereau':    today.strftime("%d/%m/%Y"),
+        'count':             factures.count(),
         'total_tiers_payant': total_tiers,
-        'factures':         factures,
     }
 
-    # 4) Rendu du PDF
-    html_string = render_to_string('comptabilite/bordereau_pdf.html', context)
-    pdf_file    = HTML(string=html_string).write_pdf()
+    # 4) Rendons le PDF
+    html = render_to_string('comptabilite/bordereau_pdf.html', context)
+    pdf  = HTML(string=html).write_pdf()
 
-    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{num_bordereau}.pdf"'
     return response
+
 
 
 from django.views.generic import ListView
@@ -467,6 +434,7 @@ from datetime import date
 from django.db.models import Sum
 from .models import Paiement
 
+@login_required
 def cheque_listing(request):
     # POST : on coche tous les chèques non listés dont la date ≤ aujourd'hui
     if request.method == 'POST':
