@@ -27,16 +27,31 @@
       <!-- Menu principal -->
       <nav class="flex-grow-1">
         <ul class="nav">
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_list' %}">Accueil</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_create' %}">Nouvelle Facture</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_search_list' %}">Nouvelle Recherche</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'create_bordereau' %}">Nouveau Bordereau</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'activity_list' %}">Activité</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'cheque_listing' %}">Chèques</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'comptabilite_summary' %}">Comptabilité</a></li>
           <li class="nav-item">
-            <a class="nav-link text-white"
-               href="https://eu.christianlouboutin.com/fr_fr/mesdames/souliers/">Oh, What a Dream !</a>
+            <a class="nav-link text-white" href="{% url 'facturation_list' %}">Accueil</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="{% url 'facturation_create' %}">Nouvelle Facture</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="{% url 'facturation_search_list' %}">Nouvelle Recherche</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="{% url 'create_bordereau' %}">Nouveau Bordereau</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="{% url 'activity_list' %}">Activité</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="{% url 'cheque_listing' %}">Chèques</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="{% url 'comptabilite_summary' %}">Comptabilité</a>
+          </li>
+          <!-- Lien aléatoire -->
+          <li class="nav-item">
+            <a class="nav-link text-white" href="javascript:void(0)"
+               onclick="ouvrirLienAuHasard()">Oh, What a Dream !</a>
           </li>
         </ul>
       </nav>
@@ -90,6 +105,22 @@
         autoclose: true
       });
     });
+  </script>
+  <!-- Script pour le lien aléatoire -->
+  <script>
+    const liens = [
+      'https://www.36degrees.pf/monohull-for-sale-tahiti-yacht-broker/',
+      'https://www.sailtahiti.com/monocoques-d-occasion/',
+      'https://www.tahitiyachtbroker.com',
+      'https://www.raiatea-yacht.com/index.php?page=voiliers',
+      'https://www.annoncesbateau.com/bateaux/pays-polynesie-francaise/?srsltid=AfmBOooNnR9xmxEtXtGZ0aWmhtfGt7P2qHLDg29x_LR7JkgqXct8tSha',
+      'https://www.petites-annonces.pf/annonces.php?p=2&c=11#txt',
+      'https://www.fmcgastro.org/textes-postus/postu-2025/'
+    ];
+    function ouvrirLienAuHasard() {
+      const i = Math.floor(Math.random() * liens.length);
+      window.location.href = liens[i];
+    }
   </script>
 </body>
 </html>
