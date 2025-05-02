@@ -20,8 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'comptabilite', 
-    'django_crontab', # Notre application
+    'comptabilite',
 ]
 
 MIDDLEWARE = [
@@ -92,8 +91,3 @@ EMAIL_HOST_PASSWORD = 'afwg flrc buze usok'
 
 DEFAULT_FROM_EMAIL  = 'Pr. Jean-Ariel Bronstein <ja.bronstein@gmail.com>'
 
-# Configuration de django-crontab
-CRONJOBS = [
-    # À 18h chaque jour, appelle la commande `send_daily_summary`
-    ('0 18 * * *', 'django.core.management.call_command', ['send_daily_summary']),
-]
