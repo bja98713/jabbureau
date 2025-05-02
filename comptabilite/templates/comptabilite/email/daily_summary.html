@@ -1,0 +1,26 @@
+<h2>Synthèse du {{ date|date:"d/m/Y" }}</h2>
+
+<table border="1" cellpadding="5" cellspacing="0">
+  <thead>
+    <tr>
+      <th>Lieu</th>
+      <th>Code acte</th>
+      <th>Montant total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for line in summary %}
+      <tr>
+        <td>{{ line.lieu_acte }}</td>
+        <td>{{ line.code_acte__code_acte }}</td>
+        <td>{{ line.montant_total|floatformat:0 }} €</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="2">Total journalier</th>
+      <th>{{ total_journalier|floatformat:0 }} €</th>
+    </tr>
+  </tfoot>
+</table>
