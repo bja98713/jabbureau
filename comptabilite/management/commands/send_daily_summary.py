@@ -9,7 +9,7 @@ class Command(BaseCommand):
     help = "Envoie chaque jour à 18h la synthèse Facturation par lieu et code"
 
     def handle(self, *args, **options):
-        today = timezone.localdate()
+        today = today = timezone.now().date() 
         qs = Facturation.objects.filter(date_acte=today)
 
         # 1. Synthèse par lieu_acte et code_acte

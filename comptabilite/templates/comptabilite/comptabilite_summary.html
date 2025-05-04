@@ -119,14 +119,15 @@
         </tr>
       </thead>
       <tbody>
+        {% load code_reel_extras %}
         {% for row in pivot_code_reel %}
-          <tr>
-            <td>{{ row.code_reel }}</td>
-            <td>{{ row.count }}</td>
-            <td>{{ row.total_acte|floatformat:"0" }}</td>
-            <td>{{ row.total_paye|floatformat:"0" }}</td>
-          </tr>
-        {% endfor %}
+        <tr>
+          <td>{{ row.code_reel|code_reel_default }}</td>
+          <td>{{ row.count }}</td>
+          <td>{{ row.total_acte|floatformat:"0" }}</td>
+          <td>{{ row.total_paye|floatformat:"0" }}</td>
+        </tr>
+{% endfor %}
       </tbody>
       <tfoot>
         <tr class="font-weight-bold">
