@@ -31,7 +31,7 @@ class Command(BaseCommand):
         }
         message_html = render_to_string('comptabilite/email/daily_summary.html', context)
         subject = f"Synthèse Facturation du {today:%d/%m/%Y}"
-        recipient = ['docteur@bronstein.fr']
+        recipient = ['docteur@bronstein.fr', 'bronstein.tahiti@proton.me']
 
         send_mail(
             subject,
@@ -41,4 +41,4 @@ class Command(BaseCommand):
             html_message=message_html,
         )
 
-        self.stdout.write(self.style.SUCCESS("E-mail de synthèse envoyé."))  
+        self.stdout.write(self.style.SUCCESS("E-mail de synthèse envoyé."))

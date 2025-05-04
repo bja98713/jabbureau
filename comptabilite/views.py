@@ -627,12 +627,12 @@ def print_cheque_listing(request):
 
     y = height - 2*cm
     c.setFont('Helvetica-Bold', 16)
-    c.drawString(2*cm, y, "Dr. Florence FOURQUET | Dermatologie | Av. du Prince HINOI | Papeete")
+    c.drawString(2*cm, y, "Dr. Jean-Ariel BRONSTEIN | Gastroentérologue")
     y -= 1*cm
 
     y = height - 2*cm
     c.setFont('Helvetica-Bold', 16)
-    c.drawString(2*cm, y, "Av. du Prince HINOI | Papeete")
+    c.drawString(2*cm, y, "Rue Lagarde | Papeete")
     y -= 1*cm
 
     c.setFont('Helvetica-Bold', 16)
