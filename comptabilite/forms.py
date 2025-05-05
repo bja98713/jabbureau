@@ -48,6 +48,13 @@ class FacturationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # si c'est une création (pas d'instance en base)
+        if not self.instance.pk:
+            today = timezone.localdate()
+            self.fields['date_acte'].initial    = today
+            self.fields['date_facture'].initial = today
+        
         # Formats d’entrée pour les dates
         for fname in ('date_naissance', 'date_acte', 'date_facture'):
             self.fields[fname].input_formats = ['%Y-%m-%d', '%d/%m/%Y']

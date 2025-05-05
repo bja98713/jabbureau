@@ -44,7 +44,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for facturation in facturations %}
+      {% for facturation in facturations reversed %}
       <tr>
         <td>{{ facturation.date_acte|date:"d/m/Y" }}</td>
         <td>{{ facturation.numero_facture }}</td>
