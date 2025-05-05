@@ -1,26 +1,14 @@
-<h2>Synthèse du {{ date|date:"d/m/Y" }}</h2>
-
-<table border="1" cellpadding="5" cellspacing="0">
-  <thead>
-    <tr>
-      <th>Lieu</th>
-      <th>Code acte</th>
-      <th>Montant total</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for line in summary %}
+<h2>Synthèse facturation du {{ date|date:"d/m/Y" }}</h2>
+{% for lieu, items in report.items %}
+  <h3>Lieu : {{ lieu|title }}</h3>
+  <table>
+    <tr><th>Code</th><th>Total Tiers Payant</th></tr>
+    {% for it in items %}
       <tr>
-        <td>{{ line.lieu_acte }}</td>
-        <td>{{ line.code_acte__code_acte }}</td>
-        <td>{{ line.montant_total|floatformat:0 }} €</td>
+        <td>{{ it.code }}</td>
+        <td>{{ it.total|floatformat:0 }} €</td>
       </tr>
     {% endfor %}
-  </tbody>
-  <tfoot>
-    <tr>
-      <th colspan="2">Total journalier</th>
-      <th>{{ total_journalier|floatformat:0 }} €</th>
-    </tr>
-  </tfoot>
-</table>
+  </table>
+{% endfor %}
+<p><strong>Total général : {{ total_all|floatformat:0 }} €</strong></p>
