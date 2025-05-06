@@ -18,6 +18,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from datetime import timedelta
 import calendar
 
+from decimal import Decimal
+
 # Vue de recherche
 class FacturationSearchListView(ListView):from django.db.models import Q
 from django.utils import timezone
@@ -239,7 +241,7 @@ def print_facture(request, pk):
     c.drawString(11.5 * cm, hauteur - 20.3 * cm, f"{variable_2}")
     c.drawString(12.5 * cm, hauteur - 20.3 * cm, f"{total_acte}")
     c.drawString(10.0 * cm, hauteur - 24.3 * cm, f"{total_acte}")
-    if facture.regime_lm:
+    if facture.regime_lm or facture.tiers_payant and facture.tiers_payant != Decimal('0'):
         c.drawString(7.5 * cm, hauteur - 27.6 * cm, f"{total_paye}")
         c.drawString(11.5 * cm, hauteur - 27.6 * cm, f"{tiers_payant}")
 
