@@ -263,7 +263,7 @@ class Paiement(models.Model):
     )
 
     def __str__(self):
-        return f"{self.date} – {self.montant}€ – {'Oui' if self.liste else 'Non'}"
+        return f"{self.date} – {self.montant} xpf – {'Oui' if self.liste else 'Non'}"
 
     def save(self, *args, **kwargs):
         # Avant de sauvegarder, on remplit la date et le montant à partir de la facture associée s'ils ne sont pas renseignés.

@@ -1,87 +1,54 @@
-# comptabilite/management/commands/send_daily_summary.py
-import sys
-from datetime import timedelta
 from django.core.management.base import BaseCommand
-from django.utils import timezone
-from django.db.models import Sum
-from django.template.loader import render_to_string
-from django.core.mail import EmailMultiAlternatives
-from django.conf import settings
+from django.template.loader       import render_to_string
+from django.core.mail             import send_mail
+from django.utils                  import timezone
+from datetime                     import timedelta
+import pytz
+
 from comptabilite.models import Facturation
 
 class Command(BaseCommand):
-    help = "Envoie chaque jour à 18h la synthèse par lieu et code."
+    help = "Envoie la synthèse journalière"
 
-    def handle(self, *args, **options):
-        # 1) Calcul de la date « veille » dans le fuseau configuré
-        tz = timezone.get_current_timezone()
-        today_local = timezone.now().astimezone(tz).date()
-        target_date = today_local - timedelta(days=1)
+    def handle(self, *args, **opts):
+        # 1) on choisit la TZ de Tahiti
+        tz_tahiti = pytz.timezone('Pacific/Tahiti')
+        now_tahiti = timezone.now().astimezone(tz_tahiti)
 
-        # 2) Filtrer les factures de la veille
-        qs = Facturation.objects.filter(date_facture=target_date)
+        # 2) date à résumer = date locale (le cron étant lancé à 18h00)
+        target_date = now_tahiti.date()
 
-        # 3) Préparer le rapport :
-        report = {}
-        grand_total_acte = 0
-        grand_total_tiers = 0
-
-        for lieu, _ in Facturation.LIEU_CHOICES:
-            sub_qs = qs.filter(lieu_acte=lieu)
-            if not sub_qs.exists():
-                continue
-
-            # regrouper par code_acte
-            rows = (
-                sub_qs
-                .values('code_acte__code_acte')
-                .annotate(
-                    total_acte=Sum('total_acte'),
-                    total_tiers=Sum('tiers_payant')
-                )
-                .order_by('code_acte__code_acte')
-            )
-
-            # transformer en liste de dict plus lisibles
-            report[lieu] = [
-                {
-                    'code': row['code_acte__code_acte'],
-                    'total_acte': row['total_acte'] or 0,
-                    'total_tiers': row['total_tiers'] or 0,
-                }
-                for row in rows
-            ]
-
-            # additionner aux totaux généraux
-            grand_total_acte  += sum(r['total_acte'] for r in report[lieu])
-            grand_total_tiers += sum(r['total_tiers'] for r in report[lieu])
-            #grand_total_total = grand_total_acte + grand_total_tiers
-
-        if not report:
-            self.stdout.write("Aucune facture à résumer pour le " + target_date.isoformat())
+        # 3) requête des factures du target_date
+        factures = Facturation.objects.filter(date_acte=target_date)
+        if not factures.exists():
+            self.stdout.write(f"Aucune facture à résumer pour le {target_date}")
             return
 
-        # 4) Construire le contexte pour le template
+        # 4) agrégations cabinet / clinique / total
+        from django.db.models import Sum
+        synthese = (factures
+                    .values('lieu_acte','code_acte__code_acte')
+                    .annotate(total_acte=Sum('total_acte'),
+                              total_tiers=Sum('tiers_payant'))
+                    .order_by('lieu_acte','code_acte__code_acte'))
+
+        grand_total = factures.aggregate(
+            grand_total_acte=Sum('total_acte'),
+            grand_total_tiers=Sum('tiers_payant')
+        )
+
+        # 5) rendu du mail
         context = {
-            'date': target_date,
-            'report': report,
-            'grand_total_acte': grand_total_acte,
-            'grand_total_tiers': grand_total_tiers,
-            #'grand_total_total': grand_total_total,
+            'target_date': target_date,
+            'synthese':    synthese,
+            'grand_total': grand_total,
         }
-
-        # 5) Rendre le corps HTML
-        html_content = render_to_string('comptabilite/daily_summary_email.html', context)
-
-        # 6) Envoyer l'email
-        subject = f"Activité du {target_date:%d/%m/%Y}"
-        from_email = settings.EMAIL_HOST_USER
-        to = ['bronstein.tahiti@proton.me', 'marie.bronstein@gmail.com']
-
-        msg = EmailMultiAlternatives(subject, "", from_email, to)
-        msg.attach_alternative(html_content, "text/html")
-        msg.send()
-
-        self.stdout.write(self.style.SUCCESS(
-            f"Synthèse envoyée pour le {target_date:%d/%m/%Y}."
-        ))
+        subject = f"Synthèse du {target_date} (cabinet/clinique)"
+        html    = render_to_string('comptabilite/daily_summary_email.html', context)
+        send_mail(subject,
+                  '',  # plain-text fallback
+                  'ja.bronstein@gmail.com',
+                  ['bronstein.tahiti@proton.me'],
+                  html_message=html
+        )
+        self.stdout.write(f"Mail envoyé pour le {target_date}")
