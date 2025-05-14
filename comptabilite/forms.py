@@ -136,3 +136,10 @@ class FacturationForm(forms.ModelForm):
             paiement.save()
 
         return fact
+    
+    def form_valid(self, form):
+        inst = form.save(commit=False)
+        if not inst.date_facture:
+            inst.date_facture = timezone.localdate()
+        inst.save()
+        return super().form_valid(form)

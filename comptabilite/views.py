@@ -221,7 +221,7 @@ def print_facture(request, pk):
     # Si hors parcours de soins ET pas encore de numéro, on le génère et on enregistre
     if not facture.code_acte.parcours_soin and not facture.numero_facture:
         now = timezone.localtime()
-        facture.numero_facture = now.strftime("FQ/%Y/%m/%d/%H:%M")
+        facture.numero_facture = now.strftime("JA/%Y/%m/%d/%H:%M")
         facture.save()
 
     c.drawString(2.0 * cm, hauteur - 3.7 * cm, f"{nom}")
@@ -277,7 +277,7 @@ def create_bordereau(request):
     today = date.today()
     week = today.isocalendar()[1]
     day_of_year = today.timetuple().tm_yday
-    num_bordereau = f"M-{today.year}-{today.month:02d}-{week:02d}-{day_of_year:03d}"
+    num_bordereau = f"M{today.year}-{today.month:02d}-{week:02d}-{day_of_year:03d}"
 
     context = {
         'factures': factures,
@@ -704,7 +704,7 @@ def generate_numero(request, pk):
     if not facture.numero_facture and not (code and code.parcours_soin):
         now = timezone.localtime()
         facture.numero_facture = (
-            f"FQ/{now.year}/{now.month:02d}/{now.day:02d}/"
+            f"JA/{now.year}/{now.month:02d}/{now.day:02d}/"
             f"{now.hour:02d}:{now.minute:02d}"
         )
         facture.save(update_fields=['numero_facture'])

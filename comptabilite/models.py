@@ -131,6 +131,7 @@ class Facturation(models.Model):
     lieu_acte = models.CharField(
         max_length=50,
         choices=LIEU_CHOICES,
+        default='Cabinet',
         verbose_name="Lieu de l'acte"
     )
 
@@ -182,6 +183,7 @@ class Facturation(models.Model):
     statut_dossier = models.CharField(
         max_length=20,
         choices=STATUT_CHOICES,
+        default='RAS',
         verbose_name="Statut du dossier"
     )
 
@@ -276,3 +278,28 @@ class Paiement(models.Model):
 
     def __str__(self):
         return f"Paiement de facture {self.facture.numero_facture} - {self.montant} xpf"
+
+from django.db import models
+
+class Statistique(models.Model):
+    """
+    Statistiques mensuelles de l'activité par lieu.
+    """
+    year = models.PositiveSmallIntegerField(verbose_name="Année")
+    month = models.PositiveSmallIntegerField(verbose_name="Mois (1-12)")
+    total_acte_cabinet = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name="Total des actes au Cabinet"
+    )
+    total_acte_clinique = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name="Total des actes en Clinique"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
+
+    class Meta:
+        unique_together = (('year', 'month'),)
+        verbose_name = "Statistique mensuelle"
+        verbose_name_plural = "Statistiques mensuelles"
