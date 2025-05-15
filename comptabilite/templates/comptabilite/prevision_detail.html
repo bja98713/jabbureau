@@ -93,15 +93,15 @@
     </div>
 
     <div class="section block">
-        <strong>Consultations demandées :</strong>
+        <strong>Consultations et Examens Programmée :</strong>
         <ul>
           {% if prevision.cs_anesthesie %}<li>Consultation anesthésie</li>{% endif %}
           {% if prevision.fo_ag %}<li>FO AG</li>{% endif %}
           {% if prevision.colo_ag %}<li>Coloscopie AG</li>{% endif %}
           {% if prevision.fo_al %}<li>FO AL</li>{% endif %}
           {% if prevision.colo_al %}<li>Coloscopie AL</li>{% endif %}
-          {% if prevision.eeh_ag %}<li>EEH AG</li>{% endif %}
-          {% if prevision.eeb_al %}<li>EEB AL</li>{% endif %}
+          {% if prevision.eeh_ag %}<li>Echoendoscopie Haute AG</li>{% endif %}
+          {% if prevision.eeb_al %}<li>Echoendoscopie Basse AL</li>{% endif %}
           {% if prevision.cs_cardiologie %}<li>Consultation cardiologie</li>{% endif %}
           {% if prevision.cs_pneumologie %}<li>Consultation pneumologie</li>{% endif %}
           {% if prevision.cs_dermatologie %}<li>Consultation dermatologie</li>{% endif %}
