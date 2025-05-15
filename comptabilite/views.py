@@ -888,26 +888,41 @@ from django.conf import settings
 def prevision_send_email(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
 
-    # chemin absolu vers le logo pour le template PDF
+    # chemins vers logo et CSS
     logo_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
     css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
 
-    # génération du contenu HTML
+    # rendu HTML
     template = get_template('comptabilite/prevision_detail.html')
     html_content = template.render({'prevision': prevision, 'logo_path': logo_path})
 
-    # génération du PDF temporaire
+    # ✅ destinataires selon le lieu d’hospitalisation
+    if prevision.lieu_hospitalisation == "Médecine":
+        destinataires = [
+            "ejosse@polyclinique-paofai.pf",
+            "secretariat@bronstein.fr",
+            "docteur@bronstein.fr"
+        ]
+    else:
+        destinataires = [
+            "bronstein.tahiti@proton.me",
+            "secretariat@bronstein.fr",
+            "docteur@bronstein.fr"
+        ]
+
+    # génération du PDF
     with tempfile.NamedTemporaryFile(delete=True, suffix=".pdf") as pdf_file:
         HTML(string=html_content, base_url=request.build_absolute_uri()).write_pdf(
             pdf_file.name, stylesheets=[CSS(filename=css_path)]
         )
         pdf_file.seek(0)
 
+        # composition du mail
         email = EmailMessage(
             subject=f"Prévision d’hospitalisation – {prevision.nom} {prevision.prenom} {prevision.date_naissance}",
             body="Bonjour,\n\nVeuillez trouver ci-joint la fiche de prévision d'hospitalisation.\n\nBien cordialement,\nDr. Bronstein",
             from_email=settings.DEFAULT_FROM_EMAIL,
-            to=["bronstein.tahiti@proton.me","secretriat@bronstein.fr", "docteur@bronstein.fr"],  # 🔄 à personnaliser
+            to=destinataires,
         )
         email.attach(f"prevision_{prevision.pk}.pdf", pdf_file.read(), 'application/pdf')
         email.send()
