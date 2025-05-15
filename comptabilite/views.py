@@ -20,6 +20,15 @@ import calendar
 
 from decimal import Decimal
 
+from django.template.loader import get_template
+from django.http import HttpResponse
+from weasyprint import HTML
+import tempfile
+
+from django.core.mail import EmailMessage
+
+
+
 # Vue de recherche
 class FacturationSearchListView(ListView):from django.db.models import Q
 from django.utils import timezone
@@ -824,11 +833,102 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
 
         return ctx
 
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import PrevisionHospitalisation
+from .forms import PrevisionHospitalisationForm
+
+def prevision_list(request):
+    previsions = PrevisionHospitalisation.objects.all()
+    return render(request, 'comptabilite/prevision_list.html', {'previsions': previsions})
+
+def prevision_create(request):
+    form = PrevisionHospitalisationForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        return redirect('prevision_list')
+    return render(request, 'comptabilite/prevision_form.html', {'form': form})
+
+def prevision_detail(request, pk):
+    prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
+    return render(request, 'comptabilite/prevision_detail.html', {'prevision': prevision})
+
+from django.conf import settings
+from weasyprint import HTML, CSS
+import os
+
+def prevision_pdf(request, pk):
+    prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
+    template = get_template('comptabilite/prevision_detail.html')
+    logo_abspath = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
+
+    html_content = template.render({
+        'prevision': prevision,
+        'logo_path': logo_abspath,
+    })
+
+    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+
+    with tempfile.NamedTemporaryFile(delete=True, suffix=".pdf") as output:
+        HTML(string=html_content, base_url=request.build_absolute_uri()).write_pdf(
+            output.name,
+            stylesheets=[CSS(filename=css_path)]
+        )
+        output.seek(0)
+        response = HttpResponse(output.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="prevision_{prevision.pk}.pdf"'
+        return response
+
+from django.core.mail import EmailMessage
+from django.template.loader import get_template
+from weasyprint import HTML, CSS
+import tempfile
+import os
+from django.conf import settings
+
+def prevision_send_email(request, pk):
+    prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
+
+    # chemin absolu vers le logo pour le template PDF
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
+    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+
+    # génération du contenu HTML
+    template = get_template('comptabilite/prevision_detail.html')
+    html_content = template.render({'prevision': prevision, 'logo_path': logo_path})
+
+    # génération du PDF temporaire
+    with tempfile.NamedTemporaryFile(delete=True, suffix=".pdf") as pdf_file:
+        HTML(string=html_content, base_url=request.build_absolute_uri()).write_pdf(
+            pdf_file.name, stylesheets=[CSS(filename=css_path)]
+        )
+        pdf_file.seek(0)
+
+        email = EmailMessage(
+            subject=f"Prévision d’hospitalisation – {prevision.nom} {prevision.prenom} {prevision.date_naissance}",
+            body="Bonjour,\n\nVeuillez trouver ci-joint la fiche de prévision d'hospitalisation.\n\nBien cordialement,\nDr. Bronstein",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=["bronstein.tahiti@proton.me"],  # 🔄 à personnaliser
+        )
+        email.attach(f"prevision_{prevision.pk}.pdf", pdf_file.read(), 'application/pdf')
+        email.send()
+
+    return redirect('prevision_detail', pk=prevision.pk)
 
 
+def prevision_update(request, pk):
+    prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
+    form = PrevisionHospitalisationForm(request.POST or None, instance=prevision)
+    if form.is_valid():
+        form.save()
+        return redirect('prevision_list')
+    return render(request, 'comptabilite/prevision_form.html', {'form': form})
 
-
-
+def prevision_delete(request, pk):
+    prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
+    if request.method == 'POST':
+        prevision.delete()
+        return redirect('prevision_list')
+    return render(request, 'comptabilite/prevision_confirm_delete.html', {'prevision': prevision})
 
 
 

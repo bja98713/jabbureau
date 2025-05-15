@@ -72,8 +72,15 @@ DATE_INPUT_FORMATS = ['%d/%m/%Y', '%Y-%m-%d']
 
 
 # Configuration des fichiers statiques
+
+
 STATIC_URL = '/static/'
-STATIC_ROOT = [BASE_DIR / 'static']
+
+# ✅ Dossier unique de sortie pour collectstatic
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# ✅ Dossiers à chercher en développement
+STATICFILES_DIRS = [ BASE_DIR / 'static' ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

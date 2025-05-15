@@ -2,6 +2,16 @@ from django.urls import path
 from . import views
 from .views import remise_cheque, ComptabiliteSummaryView, FacturationListView, FacturationCreateView
 from django.contrib.auth.views import LogoutView
+from .views import (
+    prevision_list,
+    prevision_create,
+    prevision_detail,
+    prevision_pdf,
+    prevision_send_email,
+    prevision_update,
+    prevision_delete
+)
+
 
 urlpatterns = [
     path('', views.FacturationListView.as_view(), name='facturation_list'),
@@ -23,5 +33,13 @@ urlpatterns = [
     path('<int:pk>/generate_numero/', views.generate_numero, name='generate_numero'),
     path('comptabilite/', ComptabiliteSummaryView.as_view(), name='comptabilite_summary'),
     path('accounts/logout/', LogoutView.as_view(next_page='login'), name='logout'),
+    path('previsions/', prevision_list, name='prevision_list'),
+    path('previsions/nouveau/', prevision_create, name='prevision_create'),
+    path('previsions/<int:pk>/', prevision_detail, name='prevision_detail'),
+    path('previsions/<int:pk>/pdf/', prevision_pdf, name='prevision_pdf'),
+    path('previsions/<int:pk>/email/', prevision_send_email, name='prevision_send_email'),
+    path('previsions/<int:pk>/modifier/', prevision_update, name='prevision_update'),
+    path('previsions/<int:pk>/supprimer/', prevision_delete, name='prevision_delete'),
+    path('previsions/<int:pk>/envoyer/', prevision_send_email, name='prevision_send_email'),
 ]
 

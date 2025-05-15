@@ -303,3 +303,38 @@ class Statistique(models.Model):
         unique_together = (('year', 'month'),)
         verbose_name = "Statistique mensuelle"
         verbose_name_plural = "Statistiques mensuelles"
+
+from django.db import models
+
+class PrevisionHospitalisation(models.Model):
+    dn = models.CharField(max_length=20)
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    date_naissance = models.DateField()
+
+    date_entree = models.DateField(null=True, blank=True)
+    date_bloc = models.DateField(null=True, blank=True)
+    date_sortie = models.DateField(null=True, blank=True)
+    motif_hospitalisation = models.CharField(max_length=255)
+    lieu_hospitalisation = models.CharField(max_length=50, choices=[
+        ('Médecine', 'Médecine'),
+        ('Bloc', 'Bloc'),
+        ('Soins Intensifs', 'Soins Intensifs'),
+    ])
+
+    cs_anesthesie = models.BooleanField(default=False)
+    fo_ag = models.BooleanField(default=False)
+    colo_ag = models.BooleanField(default=False)
+    fo_al = models.BooleanField(default=False)
+    colo_al = models.BooleanField(default=False)
+    eeh_ag = models.BooleanField(default=False)
+    eeb_al = models.BooleanField(default=False)
+    cs_cardiologie = models.BooleanField(default=False)
+    cs_pneumologie = models.BooleanField(default=False)
+    cs_dermatologie = models.BooleanField(default=False)
+
+    courrier = models.TextField(blank=True)
+    remarque = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"{self.nom} {self.prenom} ({self.dn})"

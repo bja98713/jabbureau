@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Supprimer la prévision ?</h2>
+  <p>Voulez-vous vraiment supprimer la prévision pour {{ prevision.nom }} {{ prevision.prenom }} ?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Confirmer</button>
+    <a href="{% url 'prevision_list' %}" class="btn btn-secondary">Annuler</a>
+  </form>
+</div>
+{% endblock %}

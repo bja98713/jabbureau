@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Prévisions d’hospitalisation</h1>
+  <a href="{% url 'prevision_create' %}" class="btn btn-success mb-3">Nouvelle Prévision</a>
+  <table class="table table-striped text-center">
+    <thead class="thead-dark">
+      <tr>
+        <th>DN</th>
+        <th>Nom</th>
+        <th>Prénom</th>
+        <th>Date de naissance</th>
+        <th>Date entrée</th>
+        <th>Date bloc</th>
+        <th>Date sortie</th>
+        <th>Lieu</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for prevision in previsions %}
+      <tr>
+        <td>{{ prevision.dn }}</td>
+        <td>{{ prevision.nom }}</td>
+        <td>{{ prevision.prenom }}</td>
+        <td>{{ prevision.date_naissance|date:"d/m/Y" }}</td>
+        <td>{{ prevision.date_entree|date:"d/m/Y" }}</td>
+        <td>{{ prevision.date_bloc|date:"d/m/Y" }}</td>
+        <td>{{ prevision.date_sortie|date:"d/m/Y" }}</td>
+        <td>{{ prevision.lieu_hospitalisation }}</td>
+        <td>
+            <a href="{% url 'prevision_detail' prevision.pk %}" class="btn btn-info btn-sm">Détails</a>
+            <a href="{% url 'prevision_update' prevision.pk %}" class="btn btn-warning btn-sm">Modifier</a>
+            <a href="{% url 'prevision_delete' prevision.pk %}" class="btn btn-danger btn-sm" 
+             onclick="return confirm('Confirmer la suppression ?');">Supprimer</a>
+            <a href="{% url 'prevision_send_email' prevision.pk %}" class="btn btn-primary btn-sm">Envoyer par mail</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

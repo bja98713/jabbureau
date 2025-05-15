@@ -2,6 +2,7 @@ from django import forms
 from django.utils import timezone
 from .models import Facturation, Paiement
 from .widgets import IntegerNumberInput, CodeSelectWidget
+from .models import PrevisionHospitalisation
 
 class FacturationForm(forms.ModelForm):
     # Champs de paiement
@@ -143,3 +144,28 @@ class FacturationForm(forms.ModelForm):
             inst.date_facture = timezone.localdate()
         inst.save()
         return super().form_valid(form)
+
+class PrevisionHospitalisationForm(forms.ModelForm):
+    class Meta:
+        model = PrevisionHospitalisation
+        fields = '__all__'
+        widgets = {
+            'date_naissance': forms.DateInput(attrs={
+                'class': 'form-control datepicker',
+                'autocomplete': 'off',
+            }),
+            'date_entree': forms.DateInput(attrs={
+                'class': 'form-control datepicker',
+                'autocomplete': 'off',
+            }),
+            'date_bloc': forms.DateInput(attrs={
+                'class': 'form-control datepicker',
+                'autocomplete': 'off',
+            }),
+            'date_sortie': forms.DateInput(attrs={
+                'class': 'form-control datepicker',
+                'autocomplete': 'off',
+            }),
+            'courrier': forms.Textarea(attrs={'rows': 6, 'cols': 60}),
+            'remarque': forms.Textarea(attrs={'rows': 3, 'cols': 60}),
+        }

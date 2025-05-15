@@ -1,0 +1,128 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Prévision d'hospitalisation</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @bottom-center {
+                content: "Page " counter(page) " / " counter(pages);
+                font-size: 10px;
+                color: #555;
+            }
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+        }
+        .header img {
+            height: 60px;
+        }
+        .header h1 {
+            font-size: 22px;
+            margin: 5px 0;
+            color: #00528C;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .label {
+            font-weight: bold;
+            width: 200px;
+            display: inline-block;
+        }
+        .block {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        body {
+            font-family: 'Helvetica', sans-serif;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #333;
+            margin: 2cm;
+        }
+        .footer {
+            position: fixed;
+            bottom: 1.5cm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10px;
+            color: #555;
+        }
+        .justifie {
+            text-align: justify;
+            white-space: pre-wrap;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="{% static 'images/logo.png' %}" alt="Logo">
+        <h1>Prévision d’hospitalisation</h1>
+        <p>Dr. Jean-Ariel Bronstein – Gastroentérologie</p>
+        <p><a href="{% url 'prevision_send_email' prevision.pk %}" class="btn btn-outline-primary">Envoyer par mail</a></p>
+    </div>
+    <div class="section">
+        <div><span class="label">DN :</span> {{ prevision.dn }}</div>
+        <div><span class="label">Nom :</span> {{ prevision.nom }}</div>
+        <div><span class="label">Prénom :</span> {{ prevision.prenom }}</div>
+        <div><span class="label">Date de naissance :</span> {{ prevision.date_naissance|date:"d/m/Y" }}</div>
+    </div>
+
+    <div class="section">
+        <div><span class="label">Date d'entrée :</span> {{ prevision.date_entree|date:"d/m/Y" }}</div>
+        <div><span class="label">Date de bloc :</span> {{ prevision.date_bloc|date:"d/m/Y" }}</div>
+        <div><span class="label">Date de sortie :</span> {{ prevision.date_sortie|date:"d/m/Y" }}</div>
+        <div><span class="label">Motif :</span> {{ prevision.motif_hospitalisation }}</div>
+        <div><span class="label">Lieu :</span> {{ prevision.lieu_hospitalisation }}</div>
+    </div>
+
+    <div class="section block">
+        <strong>Consultations demandées :</strong>
+        <ul>
+          {% if prevision.cs_anesthesie %}<li>Consultation anesthésie</li>{% endif %}
+          {% if prevision.fo_ag %}<li>FO AG</li>{% endif %}
+          {% if prevision.colo_ag %}<li>Coloscopie AG</li>{% endif %}
+          {% if prevision.fo_al %}<li>FO AL</li>{% endif %}
+          {% if prevision.colo_al %}<li>Coloscopie AL</li>{% endif %}
+          {% if prevision.eeh_ag %}<li>EEH AG</li>{% endif %}
+          {% if prevision.eeb_al %}<li>EEB AL</li>{% endif %}
+          {% if prevision.cs_cardiologie %}<li>Consultation cardiologie</li>{% endif %}
+          {% if prevision.cs_pneumologie %}<li>Consultation pneumologie</li>{% endif %}
+          {% if prevision.cs_dermatologie %}<li>Consultation dermatologie</li>{% endif %}
+        </ul>
+    </div>
+
+    <div class="section">
+    <div><span class="label">Remarque :</span></div>
+    <div class="justifie">{{ prevision.remarque|linebreaksbr }}</div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <div class="section">
+    <div><span class="label">Courrier :</span></div>
+    <div class="justifie">{{ prevision.courrier|linebreaksbr }}</div>
+    </div>
+
+    <div class="footer">
+        {{ now|date:"d/m/Y" }} – Dr. Jean-Ariel Bronstein – Cabinet de Gastroentérologie, Papeete – Tél : 87.37.87.50
+    </div>
+
+</body>
+</html>

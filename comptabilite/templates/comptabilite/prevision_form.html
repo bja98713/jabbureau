@@ -1,0 +1,64 @@
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="table-responsive">
+  <h1>{% if object %}Modifier{% else %}Créer{% endif %} une Prévision d’hospitalisation</h1>
+  <form method="post">
+    {% csrf_token %}
+    <table class="table">
+      <tbody>
+        {% for field in form %}
+        <tr id="div_{{ field.name }}">
+          <th>{{ field.label_tag }}</th>
+          <td>
+            {{ field }}
+            {% if field.help_text %}
+              <small class="form-text text-muted">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+              <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+    <a href="{% url 'prevision_list' %}" class="btn btn-secondary">Annuler</a>
+  </form>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function(){
+  $('.datepicker').datepicker({
+    format: 'dd/mm/yyyy',
+    language: 'fr',
+    autoclose: true
+  });
+
+  $('#id_dn').on('change', function(){
+    let dnValue = $(this).val();
+    if (dnValue) {
+      $.ajax({
+        url: "{% url 'check_dn' %}",
+        data: {'dn': dnValue},
+        dataType: 'json',
+        success: function(response) {
+          if (response.exists) {
+            $('#id_nom').val(response.patient.nom);
+            $('#id_prenom').val(response.patient.prenom);
+            const d = response.patient.date_naissance.split("-");
+            const dateFr = d[2] + "/" + d[1] + "/" + d[0];
+            $('#id_date_naissance').val(dateFr);
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error("Erreur AJAX DN :", status, error);
+        }
+      });
+    }
+  });
+});
+</script>
+{% endblock %}
