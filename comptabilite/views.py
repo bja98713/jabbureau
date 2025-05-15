@@ -907,7 +907,7 @@ def prevision_send_email(request, pk):
             subject=f"Prévision d’hospitalisation – {prevision.nom} {prevision.prenom} {prevision.date_naissance}",
             body="Bonjour,\n\nVeuillez trouver ci-joint la fiche de prévision d'hospitalisation.\n\nBien cordialement,\nDr. Bronstein",
             from_email=settings.DEFAULT_FROM_EMAIL,
-            to=["bronstein.tahiti@proton.me"],  # 🔄 à personnaliser
+            to=["bronstein.tahiti@proton.me","secretriat@bronstein.fr", "docteur@bronstein.fr"],  # 🔄 à personnaliser
         )
         email.attach(f"prevision_{prevision.pk}.pdf", pdf_file.read(), 'application/pdf')
         email.send()
