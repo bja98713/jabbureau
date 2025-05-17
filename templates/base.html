@@ -33,13 +33,11 @@
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'cheque_listing' %}">Chèques</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'comptabilite_summary' %}">Comptabilité</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'prevision_list' %}">Prévisions d'hospitalisation</a></li>
-          {% if request.user.is_authenticated %}
-            {% if request.user.username == "bronstein" %}
-              <li><a class="nav-link text-white" href="{% url 'chat_view' 3 %}">💬 Chat avec Secrétaire</a></li>
-            {% elif request.user.username == "Tania" %}
-              <li><a class="nav-link text-white" href="{% url 'chat_view' 1 %}">💬 Chat avec Dr Bronstein</a></li>
-            {% endif %}
-          {% endif %}
+          {% if request.user.username == "bronstein" %}
+  <li><a class="nav-link text-white" href="#" onclick="window.open('{% url 'chat_view' 3 %}', '_blank', 'width=600,height=500')">💬 Chat avec Tania</a></li>
+{% elif request.user.username == "Tania" %}
+  <li><a class="nav-link text-white" href="#" onclick="window.open('{% url 'chat_view' 1 %}', '_blank', 'width=600,height=500')">💬 Chat avec Taote</a></li>
+{% endif %}
           <li class="nav-item">
             <a class="nav-link text-white" href="javascript:void(0)" onclick="ouvrirLienAuHasard()">Oh, What a Dream !</a>
           </li>
