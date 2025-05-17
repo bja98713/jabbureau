@@ -1,3 +1,4 @@
+
 {% load static %}
 {% load user_extras %}
 {% get_user_profile request.user as profile %}
@@ -5,95 +6,57 @@
   Statut : {% if profile.is_online %}🟢 En ligne{% else %}⚪ Hors ligne{% endif %}
 {% endif %}
 
-
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %} Pr. Jean-Ariel BRONSTEIN | Gastro-entérologue {% endblock %}</title>
-  <!-- Bootstrap CSS -->
-  <link rel="stylesheet"
-        href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <!-- Vos styles perso -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
-  <!-- Datepicker CSS -->
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
   <style>
-    body {
-      background-color: #f1e9ec;
-    }
+    body { background-color: #f1e9ec; }
   </style>
 </head>
 <body>
   <header class="bg-primary text-white py-3">
     <div class="container text-center">
       <h1 class="mb-0 mr-4">Pr. Jean-Ariel BRONSTEIN | Gastro-entérologue</h1>
-
-      <!-- Menu principal -->
       <nav class="flex-grow-1">
         <ul class="nav">
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{% url 'facturation_list' %}">Accueil</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{% url 'facturation_create' %}">Nouvelle Facture</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{% url 'facturation_search_list' %}">Nouvelle Recherche</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{% url 'create_bordereau' %}">Nouveau Bordereau</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{% url 'activity_list' %}">Activité</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{% url 'cheque_listing' %}">Chèques</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{% url 'comptabilite_summary' %}">Comptabilité</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{% url 'prevision_list' %}">Prévisions d'hospitalisation</a>
-          </li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_list' %}">Accueil</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_create' %}">Nouvelle Facture</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_search_list' %}">Nouvelle Recherche</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'create_bordereau' %}">Nouveau Bordereau</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'activity_list' %}">Activité</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'cheque_listing' %}">Chèques</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'comptabilite_summary' %}">Comptabilité</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'prevision_list' %}">Prévisions d'hospitalisation</a></li>
           {% if request.user.is_authenticated %}
-  {% if request.user.username == "bronstein" %}
-    <li><a class="nav-link text-white" href="{% url 'chat_view' 3 %}">💬 Chat avec Secrétaire</a></li>
-  {% elif request.user.username == "Tania" %}
-    <li><a class="nav-link text-white" href="{% url 'chat_view' 1 %}">💬 Chat avec Dr Bronstein</a></li>
-  {% endif %}
-{% endif %}
-
-
-          <!-- Lien aléatoire -->
+            {% if request.user.username == "bronstein" %}
+              <li><a class="nav-link text-white" href="{% url 'chat_view' 3 %}">💬 Chat avec Secrétaire</a></li>
+            {% elif request.user.username == "Tania" %}
+              <li><a class="nav-link text-white" href="{% url 'chat_view' 1 %}">💬 Chat avec Dr Bronstein</a></li>
+            {% endif %}
+          {% endif %}
           <li class="nav-item">
-            <a class="nav-link text-white" href="javascript:void(0)"
-               onclick="ouvrirLienAuHasard()">Oh, What a Dream !</a>
+            <a class="nav-link text-white" href="javascript:void(0)" onclick="ouvrirLienAuHasard()">Oh, What a Dream !</a>
           </li>
         </ul>
       </nav>
 
-      <!-- Zone utilisateur à droite -->
       <ul class="nav">
         {% if user.is_authenticated %}
-          <li class="nav-item">
-            <span class="nav-link disabled text-white">Bonjour {{ user.get_username }}</span>
-          </li>
+          <li class="nav-item"><span class="nav-link disabled text-white">Bonjour {{ user.get_username }}</span></li>
           <li class="nav-item">
             <form method="post" action="{% url 'logout' %}">
               {% csrf_token %}
-              <button type="submit" class="btn btn-link nav-link text-white p-0">
-                Déconnexion
-              </button>
+              <button type="submit" class="btn btn-link nav-link text-white p-0">Déconnexion</button>
             </form>
           </li>
         {% else %}
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{% url 'login' %}">Connexion</a>
-          </li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'login' %}">Connexion</a></li>
         {% endif %}
       </ul>
     </div>
@@ -105,10 +68,7 @@
 
   <footer class="bg-light text-center py-3">
     <div class="container">
-      <p class="mb-0">
-        &copy; 2025 – <a href="{% url 'admin:index' %}">Dr. Jean-Ariel Bronstein</a> |
-        Rue Lagarde | Papeete | Tahiti
-      </p>
+      <p class="mb-0">&copy; 2025 – <a href="{% url 'admin:index' %}">Dr. Jean-Ariel Bronstein</a> | Rue Lagarde | Papeete | Tahiti</p>
     </div>
   </footer>
 
@@ -125,15 +85,13 @@
         autoclose: true
       });
     });
-  </script>
-  <!-- Script pour le lien aléatoire -->
-  <script>
+
     const liens = [
       'https://www.36degrees.pf/monohull-for-sale-tahiti-yacht-broker/',
       'https://www.sailtahiti.com/monocoques-d-occasion/',
       'https://www.tahitiyachtbroker.com',
       'https://www.raiatea-yacht.com/index.php?page=voiliers',
-      'https://www.annoncesbateau.com/bateaux/pays-polynesie-francaise/?srsltid=AfmBOooNnR9xmxEtXtGZ0aWmhtfGt7P2qHLDg29x_LR7JkgqXct8tSha',
+      'https://www.annoncesbateau.com/bateaux/pays-polynesie-francaise/',
       'https://www.petites-annonces.pf/annonces.php?p=2&c=11#txt',
       'https://www.fmcgastro.org/textes-postus/postu-2025/'
     ];
@@ -141,6 +99,22 @@
       const i = Math.floor(Math.random() * liens.length);
       window.location.href = liens[i];
     }
+
+    {% if request.user.is_authenticated %}
+    setInterval(function() {
+      $.get("/chat/get/?receiver_id={{ request.user.id }}", function(data) {
+        let unread = data.messages.filter(m => m.sender_id !== {{ request.user.id }} && !m.lu);
+        if (unread.length > 0 && !$('#chat-alert').length) {
+          const link = "/chat/" + unread[0].sender_id + "/";
+          $('body').prepend(
+            '<div id="chat-alert" style="position:fixed;top:0;left:0;width:100%;background:#fffae6;color:#333;padding:10px;z-index:9999;text-align:center;border-bottom:1px solid #ccc;">' +
+            '💬 <strong>Nouveau message reçu !</strong> <a href="' + link + '">Ouvrir le chat</a>' +
+            ' <span style="cursor:pointer;float:right;margin-right:10px;" onclick="$('#chat-alert').fadeOut();">✖</span></div>'
+          );
+        }
+      });
+    }, 10000);
+    {% endif %}
   </script>
 </body>
 </html>
