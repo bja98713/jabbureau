@@ -29,6 +29,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',  # <— doit être là
     'django.contrib.messages.middleware.MessageMiddleware',
+    'comptabilite.middleware.UpdateLastSeenMiddleware',
     # … votre propre middleware ici …
 ]
 

@@ -1,0 +1,61 @@
+
+{% extends 'base.html' %}
+{% load user_extras %}
+{% block content %}
+<h2>Messagerie interne</h2>
+
+<p>
+  Statut :
+  {% get_user_profile receiver as profile %}
+    {% if profile.is_online %}
+      🟢 En ligne
+    {% else %}
+      ⚪ Hors ligne
+    {% endif %}
+</p>
+
+<div id="chat-box" style="border:1px solid #ccc; padding:10px; height:300px; overflow-y:scroll; background:#f9f9f9;">
+  <em>Chargement des messages...</em>
+</div>
+
+<form id="chat-form" method="post" style="margin-top:10px;">
+  {% csrf_token %}
+  <input type="hidden" id="sender" value="{{ request.user.id }}">
+  <input type="hidden" id="receiver" value="{{ receiver.id }}">
+  <textarea id="message-text" rows="2" class="form-control" placeholder="Tapez votre message ici..."></textarea>
+  <button type="submit" class="btn btn-primary mt-2">Envoyer</button>
+</form>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+function rafraichirMessages() {
+  $.get("{% url 'get_messages' %}?receiver_id=" + $('#receiver').val(), function(data) {
+    $('#chat-box').html('');
+    data.messages.forEach(function(msg) {
+      const time = new Date(msg.timestamp).toLocaleTimeString();
+      const style = msg.sender_id === {{ request.user.id }} ? 'text-align:right;' : 'text-align:left;';
+      const luTag = msg.sender_id !== {{ request.user.id }} && !msg.lu ? '<span style="color:red;"> (Non lu)</span>' : '';
+      $('#chat-box').append('<div style="' + style + '"><strong>' + msg.sender_name + '</strong> (' + time + ')' + luTag + '<br>' + msg.content + '</div><hr>');
+    });
+    $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+  });
+}
+
+$(document).ready(function() {
+  rafraichirMessages();
+  setInterval(rafraichirMessages, 5000);
+
+  $('#chat-form').on('submit', function(e) {
+    e.preventDefault();
+    $.post("{% url 'send_message' %}", {
+      'csrfmiddlewaretoken': $('[name="csrfmiddlewaretoken"]').val(),
+      'receiver_id': $('#receiver').val(),
+      'content': $('#message-text').val()
+    }, function() {
+      $('#message-text').val('');
+      rafraichirMessages();
+    });
+  });
+});
+</script>
+{% endblock %}

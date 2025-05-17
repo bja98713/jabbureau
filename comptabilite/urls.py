@@ -9,7 +9,10 @@ from .views import (
     prevision_pdf,
     prevision_send_email,
     prevision_update,
-    prevision_delete
+    prevision_delete,
+    chat_view, 
+    get_messages, 
+    send_message
 )
 
 
@@ -41,5 +44,8 @@ urlpatterns = [
     path('previsions/<int:pk>/modifier/', prevision_update, name='prevision_update'),
     path('previsions/<int:pk>/supprimer/', prevision_delete, name='prevision_delete'),
     path('previsions/<int:pk>/envoyer/', prevision_send_email, name='prevision_send_email'),
+    path('chat/<int:receiver_id>/', chat_view, name='chat_view'),
+    path('chat/get/', get_messages, name='get_messages'),
+    path('chat/send/', send_message, name='send_message'),
 ]
 

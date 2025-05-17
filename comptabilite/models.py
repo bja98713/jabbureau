@@ -338,3 +338,32 @@ class PrevisionHospitalisation(models.Model):
 
     def __str__(self):
         return f"{self.nom} {self.prenom} ({self.dn})"
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class Message(models.Model):
+    sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
+    receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    lu = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f"De {self.sender} à {self.receiver} : {self.content[:30]}"
+
+# models.py
+
+from django.contrib.auth.models import User
+from django.db import models
+from django.utils import timezone
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    last_seen = models.DateTimeField(default=timezone.now)
+
+    def is_online(self):
+        return timezone.now() - self.last_seen < timezone.timedelta(minutes=5)

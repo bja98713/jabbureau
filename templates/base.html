@@ -1,4 +1,12 @@
 {% load static %}
+{% load user_extras %}
+{% get_user_profile request.user as profile %}
+{% if profile %}
+  Statut : {% if profile.is_online %}🟢 En ligne{% else %}⚪ Hors ligne{% endif %}
+{% endif %}
+
+
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -51,6 +59,15 @@
           <li class="nav-item">
             <a class="nav-link text-white" href="{% url 'prevision_list' %}">Prévisions d'hospitalisation</a>
           </li>
+          {% if request.user.is_authenticated %}
+  {% if request.user.username == "bronstein" %}
+    <li><a class="nav-link text-white" href="{% url 'chat_view' 3 %}">💬 Chat avec Secrétaire</a></li>
+  {% elif request.user.username == "Tania" %}
+    <li><a class="nav-link text-white" href="{% url 'chat_view' 1 %}">💬 Chat avec Dr Bronstein</a></li>
+  {% endif %}
+{% endif %}
+
+
           <!-- Lien aléatoire -->
           <li class="nav-item">
             <a class="nav-link text-white" href="javascript:void(0)"

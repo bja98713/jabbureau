@@ -945,6 +945,50 @@ def prevision_delete(request, pk):
         return redirect('prevision_list')
     return render(request, 'comptabilite/prevision_confirm_delete.html', {'prevision': prevision})
 
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404
+from .models import Message
+from django.contrib.auth.models import User
+
+@login_required
+def chat_view(request, receiver_id):
+    receiver = get_object_or_404(User, pk=receiver_id)
+    return render(request, 'comptabilite/chat.html', {'receiver': receiver})
+
+@login_required
+def get_messages(request):
+    receiver_id = request.GET.get('receiver_id')
+    messages = Message.objects.filter(
+        sender=request.user, receiver_id=receiver_id
+    ) | Message.objects.filter(
+        sender_id=receiver_id, receiver=request.user
+    )
+    # ✅ marquer les messages reçus comme lus
+    Message.objects.filter(sender_id=receiver_id, receiver=request.user, lu=False).update(lu=True)
+
+    data = [{
+        'sender_id': m.sender.id,
+        'sender_name': m.sender.get_full_name() or m.sender.username,
+        'content': m.content,
+        'timestamp': m.timestamp.isoformat(),
+        'lu': m.lu
+    } for m in messages]
+
+    return JsonResponse({'messages': data})
+
+
+@login_required
+def send_message(request):
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        receiver_id = request.POST.get('receiver_id')
+        Message.objects.create(
+            sender=request.user,
+            receiver_id=receiver_id,
+            content=content
+        )
+        return JsonResponse({'status': 'ok'})
 
 
 
