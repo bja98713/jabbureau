@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Patients hospitalisés{% endblock %}
+
+{% block content %}
+<head>
+  <meta charset="UTF-8">
+  <title>Patients hospitalisés</title>
+  <style>
+    body, table, td, th {
+      font-family: "DejaVu Sans", sans-serif;
+    }
+  </style>
+</head>
+<h2>Patients hospitalisés le : {{ today_formatted|date:"d/m/Y" }}</h2>
+
+<h3>Bloc</h3>
+<table class="table table-bordered">
+  <tr><th>DN</th><th>Nom</th><th>Prénom</th><th>Date de naissance</th><th>Date d'entrée</th><th>Date sortie théorique</th><th>Date de sortie</th></tr>
+  {% for p in bloc %}
+  <tr>
+    <td>{{ p.dn }}</td>
+    <td>{{ p.nom }}</td>
+    <td>{{ p.prenom }}</td>
+    <td>{{ p.date_naissance|date:"d/m/Y" }}</td>
+    <td>{{ p.date_entree|date:"d/m/Y" }}</td>
+    <td>{{ p.date_sortie|default:p.date_entree|date:"d/m/Y" }}</td>
+    <td>{{ p.date_sortie|date:"d/m/Y" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h3>Médecine</h3>
+<table class="table table-bordered">
+  <tr><th>DN</th><th>Nom</th><th>Prénom</th><th>Date de naissance</th><th>Date d'entrée</th><th>Date sortie théorique</th><th>Date de sortie</th></tr>
+  {% for p in medecine %}
+  <tr>
+    <td>{{ p.dn }}</td>
+    <td>{{ p.nom }}</td>
+    <td>{{ p.prenom }}</td>
+    <td>{{ p.date_naissance|date:"d/m/Y" }}</td>
+    <td>{{ p.date_entree|date:"d/m/Y" }}</td>
+    <td>
+  {{ p.date_sortie|default:p.date_entree|date:"d/m/Y" }}
+</td>
+
+
+    <td>{{ p.date_sortie|date:"d/m/Y" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h3>Soins continus</h3>
+<table class="table table-bordered">
+  <tr><th>DN</th><th>Nom</th><th>Prénom</th><th>Date de naissance</th><th>Date d'entrée</th><th>Date sortie théorique</th><th>Date de sortie</th></tr>
+  {% for p in soins_continus %}
+  <tr>
+    <td>{{ p.dn }}</td>
+    <td>{{ p.nom }}</td>
+    <td>{{ p.prenom }}</td>
+    <td>{{ p.date_naissance|date:"d/m/Y" }}</td>
+    <td>{{ p.date_entree|date:"d/m/Y" }}</td>
+    <td>
+  {{ p.date_sortie|default:p.date_entree|date:"d/m/Y" }}
+</td>
+
+
+    <td>{{ p.date_sortie|date:"d/m/Y" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

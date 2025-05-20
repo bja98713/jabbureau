@@ -315,6 +315,7 @@ class PrevisionHospitalisation(models.Model):
     date_entree = models.DateField(null=True, blank=True)
     date_bloc = models.DateField(null=True, blank=True)
     date_sortie = models.DateField(null=True, blank=True)
+    date_sortie_theorique = models.DateField(null=True, blank=True)
     motif_hospitalisation = models.CharField(max_length=255)
     lieu_hospitalisation = models.CharField(max_length=50, choices=[
         ('Médecine', 'Médecine'),
@@ -335,6 +336,10 @@ class PrevisionHospitalisation(models.Model):
 
     courrier = models.TextField(blank=True)
     remarque = models.CharField(max_length=255, blank=True)
+
+    @property
+    def date_sortie_theorique(self):
+        return self.date_sortie or self.date_entree + timezone.timedelta(days=1)
 
     def __str__(self):
         return f"{self.nom} {self.prenom} ({self.dn})"

@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 
+
 urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     # page de logout (redirection vers la login)

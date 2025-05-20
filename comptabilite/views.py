@@ -27,6 +27,9 @@ import tempfile
 
 from django.core.mail import EmailMessage
 
+from django.db import models
+
+
 
 
 # Vue de recherche
@@ -905,6 +908,7 @@ def prevision_send_email(request, pk):
         ]
     else:
         destinataires = [
+            "anesthesiepaofai@gmail.com",
             "bronstein.tahiti@proton.me",
             "secretariat@bronstein.fr",
             "docteur@bronstein.fr"
@@ -989,6 +993,86 @@ def send_message(request):
             content=content
         )
         return JsonResponse({'status': 'ok'})
+
+from django.utils import timezone
+from django.shortcuts import render
+from django.db.models import Q
+from .models import PrevisionHospitalisation
+
+@login_required
+def patients_hospitalises(request):
+    context = get_patients_hospitalises()
+    return render(request, "comptabilite/patients_hospitalises.html", context)
+
+from django.template.loader import get_template
+from weasyprint import HTML
+from django.http import HttpResponse
+from django.utils.timezone import now
+from django.db.models import Q
+from .models import PrevisionHospitalisation
+import tempfile
+
+@login_required
+def patients_hospitalises_pdf(request):
+    context = get_patients_hospitalises()
+    context['user'] = request.user  # ← pour éviter tout appel implicite
+
+    html_string = render_to_string("comptabilite/patients_hospitalises_pdf.html", context)
+    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="patients_hospitalises.pdf"'
+    return response
+
+
+
+def get_patients_hospitalises():
+    today = now().date()
+    qs = PrevisionHospitalisation.objects.filter(
+        date_entree__lte=today
+    ).filter(
+        Q(date_sortie__gte=today) | Q(date_sortie__isnull=True)
+    )
+    return {
+        "today_formatted": today,  # ← on laisse le formatage à Django
+        "bloc": qs.filter(lieu_hospitalisation='Bloc'),
+        "medecine": qs.filter(lieu_hospitalisation='Médecine'),
+        "soins_continus": qs.filter(lieu_hospitalisation='Soins continus'),
+    }
+
+
+
+import openpyxl
+from django.http import HttpResponse
+
+def patients_hospitalises_excel(request):
+    today = timezone.localdate()
+    hospitalises = PrevisionHospitalisation.objects.filter(
+        date_entree__lte=today
+    ).filter(Q(date_sortie__gte=today) | Q(date_sortie__isnull=True))
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Patients hospitalisés"
+
+    headers = ['DN', 'Nom', 'Prénom', 'Date Naissance', 'Entrée', 'Sortie Théorique', 'Sortie', 'Lieu']
+    ws.append(headers)
+
+    for p in hospitalises:
+        sortie_theorique = p.date_sortie or (p.date_entree + timezone.timedelta(days=1))
+        ws.append([
+            p.dn, p.nom, p.prenom,
+            p.date_naissance.strftime('%d/%m/%Y'),
+            p.date_entree.strftime('%d/%m/%Y') if p.date_entree else '',
+            sortie_theorique.strftime('%d/%m/%Y'),
+            p.date_sortie.strftime('%d/%m/%Y') if p.date_sortie else '',
+            p.lieu_hospitalisation
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=patients_hospitalises_{today}.xlsx'
+    wb.save(response)
+    return response
 
 
 

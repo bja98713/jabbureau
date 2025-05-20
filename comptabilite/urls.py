@@ -12,9 +12,11 @@ from .views import (
     prevision_delete,
     chat_view, 
     get_messages, 
-    send_message
+    send_message,
+    patients_hospitalises,
+    patients_hospitalises_pdf,
+    patients_hospitalises_excel
 )
-
 
 urlpatterns = [
     path('', views.FacturationListView.as_view(), name='facturation_list'),
@@ -47,5 +49,7 @@ urlpatterns = [
     path('chat/<int:receiver_id>/', chat_view, name='chat_view'),
     path('chat/get/', get_messages, name='get_messages'),
     path('chat/send/', send_message, name='send_message'),
+    path("patients_hospitalises/", patients_hospitalises, name="patients_hospitalises"),
+    path("patients_hospitalises/pdf/", patients_hospitalises_pdf, name="patients_hospitalises_pdf"),
+    path("patients_hospitalises/excel/", patients_hospitalises_excel, name="patients_hospitalises_excel"),
 ]
-

@@ -6,7 +6,9 @@ chardet==5.2.0
 cssselect2==0.8.0
 Django==5.2
 django-crontab==0.7.1
+et_xmlfile==2.0.0
 fonttools==4.57.0
+openpyxl==3.1.5
 pdfkit==1.0.0
 pillow==11.1.0
 pycparser==2.22
@@ -19,4 +21,3 @@ tinyhtml5==2.0.0
 weasyprint==65.0
 webencodings==0.5.1
 zopfli==0.2.3.post1
-pytz==2025.2
