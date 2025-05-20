@@ -1012,17 +1012,27 @@ from django.db.models import Q
 from .models import PrevisionHospitalisation
 import tempfile
 
+from weasyprint import HTML, CSS
+import os
+
 @login_required
 def patients_hospitalises_pdf(request):
     context = get_patients_hospitalises()
-    context['user'] = request.user  # ← pour éviter tout appel implicite
+    context['user'] = request.user
 
     html_string = render_to_string("comptabilite/patients_hospitalises_pdf.html", context)
-    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+
+    # Chemin absolu du fichier CSS
+    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+
+    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(filename=css_path)]
+    )
 
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = 'inline; filename="patients_hospitalises.pdf"'
     return response
+
 
 
 
