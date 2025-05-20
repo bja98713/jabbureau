@@ -841,7 +841,7 @@ from .models import PrevisionHospitalisation
 from .forms import PrevisionHospitalisationForm
 
 def prevision_list(request):
-    previsions = PrevisionHospitalisation.objects.all()
+    previsions = PrevisionHospitalisation.objects.all().order_by('-date_entree')
     return render(request, 'comptabilite/prevision_list.html', {'previsions': previsions})
 
 def prevision_create(request):
