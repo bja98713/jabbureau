@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: Arial, sans-serif;
+    }
+    th, td {
+      border: 1px solid #cccccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 0.9em;
+      color: #555;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h2>Prévisions d'hospitalisation pour le {{ date }}</h2>
+
+  {% if previsions %}
+  <table>
+    <thead>
+      <tr>
+        <th>DN</th>
+        <th>Nom</th>
+        <th>Prénom</th>
+        <th>Date de naissance</th>
+        <th>Date entrée</th>
+        <th>Date bloc</th>
+        <th>Date sortie</th>
+        <th>Lieu</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in previsions %}
+      <tr>
+        <td>{{ p.dn }}</td>
+        <td>{{ p.nom }}</td>
+        <td>{{ p.prenom }}</td>
+        <td>{{ p.date_naissance|date:"d/m/Y" }}</td>
+        <td>{{ p.date_entree|date:"d/m/Y" }}</td>
+        <td>{{ p.date_bloc|date:"d/m/Y" }}</td>
+        <td>{{ p.date_sortie|date:"d/m/Y" }}</td>
+        <td>{{ p.lieu_hospitalisation }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Aucune prévision d'hospitalisation prévue pour cette date.</p>
+  {% endif %}
+
+  <div class="footer">
+    — Email automatique envoyé par le système de facturation du Dr Bronstein.
+  </div>
+</body>
+</html>

@@ -840,9 +840,17 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import PrevisionHospitalisation
 from .forms import PrevisionHospitalisationForm
 
+from django.utils.timezone import localtime
+
 def prevision_list(request):
     previsions = PrevisionHospitalisation.objects.all().order_by('-date_entree')
-    return render(request, 'comptabilite/prevision_list.html', {'previsions': previsions})
+    today = localtime().date()
+
+    return render(request, 'comptabilite/prevision_list.html', {
+        'previsions': previsions,
+        'today': today,
+    })
+
 
 def prevision_create(request):
     form = PrevisionHospitalisationForm(request.POST or None)
