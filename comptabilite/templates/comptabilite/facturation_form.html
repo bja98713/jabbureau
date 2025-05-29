@@ -144,4 +144,19 @@ $(document).ready(function(){
     $('#id_regime_tp').on('change', toggleTpAlert);
   });
   </script>
+  <script>
+$(document).ready(function(){
+  function updateRegimeLM() {
+    const total = parseFloat($('#id_total_paye').val()) || 0;
+    const isLm = [0, 230, 396].includes(total);
+    $('#id_regime_lm').prop('checked', isLm);
+    $('#id_regime_lm').prop('disabled', true);
+    $('#lm-alert').toggle(isLm);
+    $('#id_numero_facture').prop('required', isLm);
+  }
+  updateRegimeLM();
+  $('#id_total_paye').on('change keyup', updateRegimeLM);
+});
+</script>
+
 {% endblock %}

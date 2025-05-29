@@ -4,6 +4,7 @@ from django.template.loader import render_to_string
 from django.utils.timezone import localdate, timedelta
 from django.conf import settings
 
+
 from comptabilite.models import PrevisionHospitalisation
 
 class Command(BaseCommand):
