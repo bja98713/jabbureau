@@ -52,6 +52,16 @@ class FacturationForm(forms.ModelForm):
             self.fields[fname].input_formats = ['%Y-%m-%d', '%d/%m/%Y']
         for fname in ('tiers_payant', 'total_paye', 'numero_facture', 'code_acte', 'total_acte'):
             self.fields[fname].required = False
+        # Réordonnancement : modalite_paiement, banque, porteur après total_paye
+        order = list(self.fields.keys())
+        for key in ('modalite_paiement', 'banque', 'porteur'):
+            if key in order:
+                order.remove(key)
+        if 'total_paye' in order:
+            idx = order.index('total_paye')
+            order[idx+1:idx+1] = ['modalite_paiement', 'banque', 'porteur']
+        self.order_fields(order)
+
 
     def clean(self):
         cleaned = super().clean()
