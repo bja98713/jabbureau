@@ -372,3 +372,9 @@ class UserProfile(models.Model):
 
     def is_online(self):
         return timezone.now() - self.last_seen < timezone.timedelta(minutes=5)
+
+class ParametrageFacturation(models.Model):
+    prochain_numero = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"Prochain numéro de facture : {self.prochain_numero}"
