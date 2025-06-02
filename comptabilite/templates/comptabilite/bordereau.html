@@ -16,7 +16,7 @@
     <p><strong>Date du bordereau :</strong> {{ date_bordereau }}</p>
     <hr>
     <p><strong>Nombre de factures :</strong> {{ count }}</p>
-    <p><strong>Total tiers payant :</strong> {{ total_tiers_payant|floatformat:0 }} xpf</p>
+    <p><strong>Total Part CPS :</strong> {{ total_tiers_payant|floatformat:0 }} xpf</p>
     <hr>
 
     <table id="bordereau-table" class="table table-bordered table-striped">
@@ -27,7 +27,7 @@
           <th>Nom</th>
           <th>Prénom</th>
           <th>Date facture</th>
-          <th>Tiers payant</th>
+          <th>Part CPS</th>
         </tr>
       </thead>
       <tbody>

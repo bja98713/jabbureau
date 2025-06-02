@@ -24,7 +24,7 @@
   <p><strong>N° Destinataire : T 0 0 0 3 1 7 0</strong></p>
   <p>-----------------------------------------------------------</p>
   <p><strong>Nombre de factures :</strong> {{ count }}</p>
-  <p><strong>Total tiers payant :</strong> {{ total_tiers_payant }}</p>
+  <p><strong>Total Part CPS :</strong> {{ total_tiers_payant }} XPF</p>
   <p>-----------------------------------------------------------</p>
   <table>
     <thead>
@@ -34,7 +34,7 @@
         <th>Nom</th>
         <th>Prénom</th>
         <th>Date facture</th>
-        <th>Tiers payant</th>
+        <th>Part CPS</th>
       </tr>
     </thead>
     <tbody>
@@ -45,7 +45,7 @@
         <td>{{ facture.nom }}</td>
         <td>{{ facture.prenom }}</td>
         <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
-        <td>{{ facture.tiers_payant }}</td>
+        <td>{{ facture.tiers_payant }} XPF</td>
       </tr>
       {% endfor %}
     </tbody>
