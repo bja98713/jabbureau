@@ -15,7 +15,9 @@ from .views import (
     send_message,
     patients_hospitalises,
     patients_hospitalises_pdf,
-    patients_hospitalises_excel
+    patients_hospitalises_excel,
+    print_facture,
+    imprimer_fiche_facturation
 )
 
 urlpatterns = [
@@ -52,4 +54,6 @@ urlpatterns = [
     path("patients_hospitalises/", patients_hospitalises, name="patients_hospitalises"),
     path("patients_hospitalises/pdf/", patients_hospitalises_pdf, name="patients_hospitalises_pdf"),
     path("patients_hospitalises/excel/", patients_hospitalises_excel, name="patients_hospitalises_excel"),
+    path('facture/<int:pk>/print/', print_facture, name='print_facture'),
+    path('facturation/<int:pk>/fiche/', imprimer_fiche_facturation, name='imprimer_fiche_facturation'),
 ]

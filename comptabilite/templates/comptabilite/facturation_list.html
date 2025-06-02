@@ -63,12 +63,9 @@
               Imprimer Feuille CPS
             </a>
           {% else %}
-            <button
-              class="btn btn-primary btn-sm print-btn"
-              data-pk="{{ facturation.pk }}"
-            >
-              Impression de la Facture
-            </button>
+            <a href="{% url 'imprimer_fiche_facturation' facturation.pk %}" class="btn btn-primary">
+              Imprimer facture
+            </a>
           {% endif %}
         </td>
       </tr>

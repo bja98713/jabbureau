@@ -16,7 +16,7 @@
       </select>
     </div>
 
-    <!-- Cases à cocher -->
+    <!-- Cases à cocher de regroupement -->
     <div class="form-group mr-2">
       <label>
         <input type="checkbox" name="group_regime"
@@ -38,7 +38,15 @@
         Par code réel
       </label>
     </div>
+    <div class="form-group mr-2">
+      <label>
+        <input type="checkbox" name="group_lieu"
+               {% if group_lieu %}checked{% endif %}>
+        Par lieu
+      </label>
+    </div>
   </form>
+
 
   {# --- Répartition par régime --- #}
   {% if pivot_regime %}
@@ -55,7 +63,7 @@
       <tbody>
         {% for row in pivot_regime %}
           <tr>
-            <td>{{ row.regime }}</td>
+            <td>{{ row.regime|default:"(Non renseigné)" }}</td>
             <td>{{ row.count }}</td>
             <td>{{ row.total_acte|floatformat:"0" }}</td>
             <td>{{ row.total_paye|floatformat:"0" }}</td>
@@ -73,6 +81,7 @@
     </table>
   {% endif %}
 
+
   {# --- Répartition par modalité --- #}
   {% if pivot_modalite %}
     <h2>Répartition par modalité de paiement</h2>
@@ -88,7 +97,7 @@
       <tbody>
         {% for row in pivot_modalite %}
           <tr>
-            <td>{{ row.label }}</td>
+            <td>{{ row.label|default:"(Non renseigné)" }}</td>
             <td>{{ row.count }}</td>
             <td>{{ row.total_acte|floatformat:"0" }}</td>
             <td>{{ row.total_paye|floatformat:"0" }}</td>
@@ -106,6 +115,7 @@
     </table>
   {% endif %}
 
+
   {# --- Répartition par code réel --- #}
   {% if pivot_code_reel %}
     <h2>Répartition par code réel</h2>
@@ -121,13 +131,13 @@
       <tbody>
         {% load code_reel_extras %}
         {% for row in pivot_code_reel %}
-        <tr>
-          <td>{{ row.code_reel|code_reel_default }}</td>
-          <td>{{ row.count }}</td>
-          <td>{{ row.total_acte|floatformat:"0" }}</td>
-          <td>{{ row.total_paye|floatformat:"0" }}</td>
-        </tr>
-{% endfor %}
+          <tr>
+            <td>{{ row.code_reel|code_reel_default }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.total_acte|floatformat:"0" }}</td>
+            <td>{{ row.total_paye|floatformat:"0" }}</td>
+          </tr>
+        {% endfor %}
       </tbody>
       <tfoot>
         <tr class="font-weight-bold">
@@ -135,6 +145,40 @@
           <td>{{ totals_code_reel.count }}</td>
           <td>{{ totals_code_reel.total_acte|floatformat:"0" }}</td>
           <td>{{ totals_code_reel.total_paye|floatformat:"0" }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  {% endif %}
+
+
+  {# --- Répartition par lieu d'acte --- #}
+  {% if pivot_lieu %}
+    <h2>Répartition par lieu d'acte</h2>
+    <table class="table table-bordered text-center">
+      <thead>
+        <tr>
+          <th>Lieu</th>
+          <th>Nb. factures</th>
+          <th>Total acte</th>
+          <th>Total payé</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pivot_lieu %}
+          <tr>
+            <td>{{ row.lieu_acte|default:"(Non renseigné)" }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.total_acte|floatformat:"0" }}</td>
+            <td>{{ row.total_paye|floatformat:"0" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="font-weight-bold">
+          <td>Total</td>
+          <td>{{ totals_lieu.count }}</td>
+          <td>{{ totals_lieu.total_acte|floatformat:"0" }}</td>
+          <td>{{ totals_lieu.total_paye|floatformat:"0" }}</td>
         </tr>
       </tfoot>
     </table>

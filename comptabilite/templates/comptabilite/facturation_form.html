@@ -174,5 +174,19 @@ $(document).ready(function(){
   $('#id_total_paye, #id_lieu_acte').on('change keyup', updateRegimeLM);
 });
 </script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const buttons = document.querySelectorAll(".print-btn");
+    buttons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const pk = this.dataset.pk;
+        if (pk) {
+          window.location.href = `/facture/${pk}/print/`;
+        }
+      });
+    });
+  });
+</script>
+
 
 {% endblock %}

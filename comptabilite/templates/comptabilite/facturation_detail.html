@@ -64,9 +64,10 @@
   </a>
 {% else %}
   {# HORS PARCOURS → on génère le n° puis impression navigateur #}
-  <button id="printBtn" class="btn btn-primary">
-    Imprimer
-  </button>
+  <a href="{% url 'imprimer_fiche_facturation' facturation.pk %}" class="btn btn-primary">
+  Imprimer
+</a>
+
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script>
   $(function(){

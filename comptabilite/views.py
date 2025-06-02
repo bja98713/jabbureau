@@ -731,14 +731,19 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Facturation
 
+from django.views.generic import ListView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count, Sum
+from django.utils import timezone
+from datetime import timedelta
+from .models import Facturation
+
 class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
     login_url = 'login'
-    redirect_field_name = 'next'   # paramètre renvoyé après login
+    redirect_field_name = 'next'
     model = Facturation
     template_name = 'comptabilite/comptabilite_summary.html'
     context_object_name = 'summary_rows'
-    login_url = 'login'
-    redirect_field_name = 'next'
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -762,7 +767,7 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         qs = self.get_queryset()
 
-        # paramètres de la vue
+        # Période (pour réaffichage)
         ctx['period_choices'] = [
             ('', 'Toutes'),
             ('today', "Aujourd'hui"),
@@ -772,17 +777,21 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
         ]
         ctx['period'] = self.request.GET.get('period', '')
 
-        # lire si chaque case est cochée
-        ctx['group_regime']      = bool(self.request.GET.get('group_regime'))
-        ctx['group_modalite']    = bool(self.request.GET.get('group_modalite'))
-        ctx['group_code_reel']   = bool(self.request.GET.get('group_code_reel'))
+        # Lecture des cases à cocher
+        ctx['group_regime']    = bool(self.request.GET.get('group_regime'))
+        ctx['group_modalite']  = bool(self.request.GET.get('group_modalite'))
+        ctx['group_code_reel'] = bool(self.request.GET.get('group_code_reel'))
+        ctx['group_lieu']      = bool(self.request.GET.get('group_lieu'))
 
-        # pivot par régime
+        # Pivot par régime
         if ctx['group_regime']:
-            rows = qs.values('regime') \
-                     .annotate(count=Count('id'),
-                               total_acte=Sum('total_acte'),
-                               total_paye=Sum('total_paye'))
+            rows = (qs.values('regime')
+                     .annotate(
+                         count=Count('id'),
+                         total_acte=Sum('total_acte'),
+                         total_paye=Sum('total_paye')
+                     )
+                  )
         else:
             rows = []
         ctx['pivot_regime'] = rows
@@ -792,49 +801,79 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
             'total_paye': sum(r['total_paye'] or 0 for r in rows),
         }
 
-        # pivot par modalité
+        # Pivot par modalité
         if ctx['group_modalite']:
             tmp = (qs.select_related('paiement')
                      .values('paiement__modalite_paiement')
-                     .annotate(count=Count('id'),
-                               total_acte=Sum('total_acte'),
-                               total_paye=Sum('total_paye'))
-                     .order_by('paiement__modalite_paiement'))
-            rows = [
+                     .annotate(
+                         count=Count('id'),
+                         total_acte=Sum('total_acte'),
+                         total_paye=Sum('total_paye')
+                     )
+                     .order_by('paiement__modalite_paiement')
+                  )
+            rows_mod = [
                 {'label': r['paiement__modalite_paiement'], **r}
                 for r in tmp
             ]
         else:
-            rows = []
-        ctx['pivot_modalite'] = rows
+            rows_mod = []
+        ctx['pivot_modalite'] = rows_mod
         ctx['totals_modalite'] = {
-            'count': sum(r['count'] for r in rows),
-            'total_acte': sum(r['total_acte'] or 0 for r in rows),
-            'total_paye': sum(r['total_paye'] or 0 for r in rows),
+            'count': sum(r['count'] for r in rows_mod),
+            'total_acte': sum(r['total_acte'] or 0 for r in rows_mod),
+            'total_paye': sum(r['total_paye'] or 0 for r in rows_mod),
         }
 
-        # pivot par code réel
+        # Pivot par code réel
         if ctx['group_code_reel']:
             tmp = (qs.select_related('code_acte')
                      .values('code_acte__code_reel')
-                     .annotate(count=Count('id'),
-                               total_acte=Sum('total_acte'),
-                               total_paye=Sum('total_paye'))
-                     .order_by('code_acte__code_reel'))
-            rows = [
+                     .annotate(
+                         count=Count('id'),
+                         total_acte=Sum('total_acte'),
+                         total_paye=Sum('total_paye')
+                     )
+                     .order_by('code_acte__code_reel')
+                  )
+            rows_code = [
                 {'code_reel': r['code_acte__code_reel'], **r}
                 for r in tmp
             ]
         else:
-            rows = []
-        ctx['pivot_code_reel'] = rows
+            rows_code = []
+        ctx['pivot_code_reel'] = rows_code
         ctx['totals_code_reel'] = {
-            'count': sum(r['count'] for r in rows),
-            'total_acte': sum(r['total_acte'] or 0 for r in rows),
-            'total_paye': sum(r['total_paye'] or 0 for r in rows),
+            'count': sum(r['count'] for r in rows_code),
+            'total_acte': sum(r['total_acte'] or 0 for r in rows_code),
+            'total_paye': sum(r['total_paye'] or 0 for r in rows_code),
+        }
+
+        # Pivot par lieu d'acte
+        if ctx['group_lieu']:
+            tmp = (qs.values('lieu_acte')
+                     .annotate(
+                         count=Count('id'),
+                         total_acte=Sum('total_acte'),
+                         total_paye=Sum('total_paye')
+                     )
+                     .order_by('lieu_acte')
+                  )
+            rows_lieu = [
+                {'lieu_acte': r['lieu_acte'], **r}
+                for r in tmp
+            ]
+        else:
+            rows_lieu = []
+        ctx['pivot_lieu'] = rows_lieu
+        ctx['totals_lieu'] = {
+            'count': sum(r['count'] for r in rows_lieu),
+            'total_acte': sum(r['total_acte'] or 0 for r in rows_lieu),
+            'total_paye': sum(r['total_paye'] or 0 for r in rows_lieu),
         }
 
         return ctx
+
 
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import PrevisionHospitalisation
@@ -912,11 +951,13 @@ def prevision_send_email(request, pk):
         destinataires = [
             "ejosse@polyclinique-paofai.pf",
             "secretariat@bronstein.fr",
+            "medecine@polyclinique-paofai.pf",
             "docteur@bronstein.fr"
         ]
     else:
         destinataires = [
             "anesthesiepaofai@gmail.com",
+            "ebarce@polyclinique-paofai.pf"
             "bronstein.tahiti@proton.me",
             "secretariat@bronstein.fr",
             "docteur@bronstein.fr"
@@ -1090,6 +1131,71 @@ def patients_hospitalises_excel(request):
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = f'attachment; filename=patients_hospitalises_{today}.xlsx'
     wb.save(response)
+    return response
+
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from .models import Facturation
+from django.utils.formats import date_format
+from django.utils.translation import activate
+from reportlab.lib.styles import getSampleStyleSheet
+import datetime
+
+def imprimer_fiche_facturation(request, pk):
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from decimal import Decimal
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from .models import Facturation
+    from django.shortcuts import get_object_or_404
+
+    activate('fr')  # Pour forcer les dates au format français
+
+    facture = get_object_or_404(Facturation, pk=pk)
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="facture_{facture.numero_facture or facture.pk}.pdf"'
+    c = canvas.Canvas(response, pagesize=A4)
+    largeur, hauteur = A4
+
+    today_str = date_format(timezone.localdate(), format='d F Y', use_l10n=True)
+
+    # En-tête
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(2 * cm, hauteur - 2 * cm, "Dr. Jean-Ariel BRONSTEIN")
+    c.setFont("Helvetica", 12)
+    c.drawString(2 * cm, hauteur - 2.7 * cm, "Gastro-entérologue")
+    c.drawString(2 * cm, hauteur - 3.4 * cm, "Adresse : Clinique Paofai | Tel : 40.81.48.48")
+    c.drawString(2 * cm, hauteur - 4.1 * cm, f"Date : {today_str}")
+
+    # Corps de la facture
+    c.setFont("Helvetica", 11)
+    y = hauteur - 5.5 * cm
+    lignes = [
+        f"Facture n° : {facture.numero_facture or 'Non attribué'}",
+        f"Patient : {facture.nom} {facture.prenom}",
+        f"Date de naissance : {date_format(facture.date_naissance, 'd F Y') if facture.date_naissance else ''}",
+        f"DN : {facture.dn}",
+        f"Date de l'acte : {date_format(facture.date_acte, 'd F Y') if facture.date_acte else ''}",
+        f"Date de la facture : {date_format(facture.date_facture, 'd F Y') if facture.date_facture else ''}",
+        f"Code Acte : {facture.code_acte.code_acte if facture.code_acte else ''}",
+        f"Montant total : {facture.total_acte} XPF",
+        #f"Tiers Payant : {facture.tiers_payant or 0} XPF",
+        #f"Total Payé : {facture.total_paye or 0} XPF",
+        "",
+        f"Payé le : {today_str}",
+        "",
+        "Signature : Dr. Jean-Ariel Bronstein"
+    ]
+    for line in lignes:
+        c.drawString(2 * cm, y, line)
+        y -= 1 * cm
+
+    c.save()
     return response
 
 
