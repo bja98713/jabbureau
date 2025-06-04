@@ -957,7 +957,7 @@ def prevision_send_email(request, pk):
     else:
         destinataires = [
             "anesthesiepaofai@gmail.com",
-            "ebarce@polyclinique-paofai.pf"
+            "ebarce@polyclinique-paofai.pf",
             "bronstein.tahiti@proton.me",
             "secretariat@bronstein.fr",
             "docteur@bronstein.fr"
