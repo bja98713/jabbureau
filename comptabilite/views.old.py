@@ -1,70 +1,42 @@
-
-from __future__ import annotations
-import json
-
-# ========== Standard / Django imports ==========
-import io
-import os
-import tempfile
-import calendar
-from decimal import Decimal
-
-import openpyxl
-import pdfkit
-
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
-from django.db import models
-from django.db.models import Q, Sum, Count
-from django.forms.widgets import NumberInput
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
-from django.template.loader import get_template, render_to_string
-from django.urls import reverse_lazy
-from django.utils import timezone
-from django.utils.formats import date_format
-from django.utils.timezone import localtime, now
-from django.utils.translation import activate
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
-
+from django.urls import reverse_lazy
+from django.http import JsonResponse, HttpResponse
+from django.db.models import Q, Sum
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
-from reportlab.lib.styles import getSampleStyleSheet
+from .models import Facturation, Code, Paiement
+from .forms import FacturationForm
+from django.utils import timezone
 
-from weasyprint import HTML, CSS
+import pdfkit
+from django.conf import settings
 
-# ========== datetime strategy ==========
-import datetime as dt_module
-from datetime import datetime as dt, timedelta, date
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 
-# ========== Local app imports ==========
-from .models import (
-    Facturation, Code, Paiement,
-    PrevisionHospitalisation, Message,
-)
-from .forms import FacturationForm, PrevisionHospitalisationForm
+from datetime import timedelta
+import calendar
 
+from decimal import Decimal
 
-# ========== Utilities ==========
-def parse_flex_date(s: str | None) -> dt_module.date | None:
-    """
-    Essaie de parser une date aux formats 'YYYY-MM-DD' ou 'DD/MM/YYYY'.
-    Retourne un objet date (naive) ou None si invalide.
-    """
-    if not s:
-        return None
-    for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
-        try:
-            return dt.strptime(s, fmt).date()
-        except ValueError:
-            continue
-    return None
+from django.template.loader import get_template
+from django.http import HttpResponse
+from weasyprint import HTML
+import tempfile
+
+from django.core.mail import EmailMessage
+
+from django.db import models
 
 
-# ========== Facturation: Search / CRUD / Detail ==========
+
+
+# Vue de recherche
+class FacturationSearchListView(ListView):from django.db.models import Q
+from django.utils import timezone
+from datetime import timedelta
+import calendar
 
 class FacturationSearchListView(LoginRequiredMixin, ListView):
     login_url = 'login'
@@ -109,9 +81,10 @@ class FacturationSearchListView(LoginRequiredMixin, ListView):
         return qs.order_by('-date_acte')  # ou l'ordre que vous préférez
 
 
+# Vue pour la liste des facturations
 class FacturationListView(LoginRequiredMixin, ListView):
     login_url = 'login'
-    redirect_field_name = 'next'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     template_name = 'comptabilite/facturation_list.html'
     context_object_name = 'facturations'
@@ -124,10 +97,16 @@ class FacturationListView(LoginRequiredMixin, ListView):
             qs = qs.filter(date_acte=today)
         return qs
 
+# Vue de création avec le formulaire personnalisé
+import json
+from django.views.generic import CreateView
+from django.urls import reverse_lazy
+from .models import Facturation, Code
+from .forms import FacturationForm
 
 class FacturationCreateView(LoginRequiredMixin, CreateView):
     login_url = 'login'
-    redirect_field_name = 'next'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     form_class = FacturationForm
     template_name = 'comptabilite/facturation_form.html'
@@ -139,6 +118,7 @@ class FacturationCreateView(LoginRequiredMixin, CreateView):
         codes = Code.objects.all()
         codes_data = {}
         for code in codes:
+            # On indexe par la valeur du champ code_acte, ou vous pouvez utiliser code.pk
             codes_data[code.code_acte] = {
                 'total_acte': str(code.total_acte),
                 'tiers_payant': str(code.tiers_payant),
@@ -147,43 +127,26 @@ class FacturationCreateView(LoginRequiredMixin, CreateView):
         context['codes_data'] = json.dumps(codes_data)
         return context
 
-    def form_valid(self, form):
-        inst = form.instance
-        if (inst.lieu_acte or '').lower() == 'clinique':
-            inst.numero_facture = ''  # force vide
-        return super().form_valid(form)
-
-
+# Vue de mise à jour avec le formulaire personnalisé
 class FacturationUpdateView(LoginRequiredMixin, UpdateView):
     login_url = 'login'
-    redirect_field_name = 'next'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     form_class = FacturationForm
     template_name = 'comptabilite/facturation_form.html'
     success_url = reverse_lazy('facturation_list')
 
-    def form_valid(self, form):
-        inst = form.instance
-        if (inst.lieu_acte or '').lower() == 'clinique':
-            inst.numero_facture = ''  # force vide
-        return super().form_valid(form)
-
-
-class FacturationDeleteView(LoginRequiredMixin, DeleteView):
-    login_url = 'login'
-    redirect_field_name = 'next'
+class FacturationDeleteView(DeleteView):
     model = Facturation
     template_name = 'comptabilite/facturation_confirm_delete.html'
     success_url = reverse_lazy('facturation_list')
 
-
 class FacturationDetailView(LoginRequiredMixin, DetailView):
     login_url = 'login'
-    redirect_field_name = 'next'
+    redirect_field_name = 'next'   # paramètre renvoyé après login
     model = Facturation
     template_name = 'comptabilite/facturation_detail.html'
     context_object_name = 'facturation'
-
 
 def check_dn(request):
     dn = request.GET.get('dn')
@@ -194,13 +157,12 @@ def check_dn(request):
                 'dn': fact.dn,
                 'nom': fact.nom,
                 'prenom': fact.prenom,
-                'date_naissance': fact.date_naissance.strftime('%Y-%m-%d') if fact.date_naissance else "",
+                'date_naissance': fact.date_naissance.strftime('%Y-%m-%d'),  # Format ISO attendu par type="date"
             }
             return JsonResponse({'exists': True, 'patient': data})
         except Facturation.DoesNotExist:
             pass
     return JsonResponse({'exists': False})
-
 
 def check_acte(request):
     code_value = request.GET.get('code')
@@ -219,12 +181,17 @@ def check_acte(request):
     return JsonResponse({'exists': False})
 
 
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+
 def print_facture(request, pk):
     facture = get_object_or_404(Facturation, pk=pk)
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="facture_{}.pdf"'.format(facture.numero_facture or facture.pk)
     c = canvas.Canvas(response, pagesize=A4)
     largeur, hauteur = A4
+
+
 
     # Récupération des données
     nom = facture.nom
@@ -264,13 +231,9 @@ def print_facture(request, pk):
         regime_lm = "X" if facture.regime_lm else ""
 
     # Si hors parcours de soins ET pas encore de numéro, on le génère et on enregistre
-    if (
-        not facture.code_acte.parcours_soin
-        and not facture.numero_facture
-        and (getattr(facture, 'lieu_acte', '') or '').lower() != 'clinique'
-    ):
-        now_local = timezone.localtime()
-        facture.numero_facture = now_local.strftime("JA/%Y/%m/%d/%H:%M")
+    if not facture.code_acte.parcours_soin and not facture.numero_facture:
+        now = timezone.localtime()
+        facture.numero_facture = now.strftime("JA/%Y/%m/%d/%H:%M")
         facture.save()
 
     c.drawString(2.0 * cm, hauteur - 3.7 * cm, f"{nom}")
@@ -290,15 +253,20 @@ def print_facture(request, pk):
     c.drawString(11.5 * cm, hauteur - 20.3 * cm, f"{variable_2}")
     c.drawString(12.5 * cm, hauteur - 20.3 * cm, f"{total_acte}")
     c.drawString(10.0 * cm, hauteur - 24.3 * cm, f"{total_acte}")
-    if facture.regime_lm or (facture.tiers_payant and facture.tiers_payant != Decimal('0')):
+    if facture.regime_lm or facture.tiers_payant and facture.tiers_payant != Decimal('0'):
         c.drawString(7.5 * cm, hauteur - 27.6 * cm, f"{total_paye}")
         c.drawString(11.5 * cm, hauteur - 27.6 * cm, f"{tiers_payant}")
 
     c.save()
     return response
 
-
-# ========== Bordereau ==========
+from datetime import date
+from django.shortcuts import render, get_object_or_404
+from django.db.models import Q, Sum
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from weasyprint import HTML
+from .models import Facturation
 
 @login_required
 def create_bordereau(request):
@@ -318,22 +286,28 @@ def create_bordereau(request):
             'error': "Aucune facture à traiter pour le bordereau."
         })
 
-    today_local = date.today()
-    week = today_local.isocalendar()[1]
-    day_of_year = today_local.timetuple().tm_yday
-    num_bordereau = f"M{today_local.year}-{today_local.month:02d}-{week:02d}-{day_of_year:03d}"
+    today = date.today()
+    week = today.isocalendar()[1]
+    day_of_year = today.timetuple().tm_yday
+    num_bordereau = f"M{today.year}-{today.month:02d}-{week:02d}-{day_of_year:03d}"
 
     context = {
         'factures': factures,
         'num_bordereau': num_bordereau,
-        'date_bordereau': today_local.strftime("%d/%m/%Y"),
+        'date_bordereau': today.strftime("%d/%m/%Y"),
         'count': factures.count(),
         'total_tiers_payant': factures.aggregate(total=Sum('tiers_payant'))['total'] or 0,
     }
     return render(request, 'comptabilite/bordereau.html', context)
 
 
-@login_required
+from datetime import date
+from django.db.models import Sum, Q
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from weasyprint import HTML
+from .models import Facturation
+
 def print_bordereau(request, num_bordereau):
     """
     Impression du bordereau :
@@ -359,13 +333,13 @@ def print_bordereau(request, num_bordereau):
     total_tiers = sum(f.tiers_payant for f in factures_list)
 
     # 4) Mise à jour en base
-    today_local = date.today()
-    qs.update(numero_bordereau=num_bordereau, date_bordereau=today_local)
+    today = date.today()
+    qs.update(numero_bordereau=num_bordereau, date_bordereau=today)
 
     # 5) Contexte, on passe la liste « figée »
     context = {
         'num_bordereau':      num_bordereau,
-        'date_bordereau':     today_local.strftime("%d/%m/%Y"),
+        'date_bordereau':     today.strftime("%d/%m/%Y"),
         'count':              count,
         'total_tiers_payant': total_tiers,
         'factures':           factures_list,
@@ -380,7 +354,16 @@ def print_bordereau(request, num_bordereau):
     return response
 
 
-# ========== Activity list / filters ==========
+from django.views.generic import ListView
+from django.db.models import Q
+from datetime import datetime
+from .models import Facturation
+
+# comptabilite/views.py
+from django.views.generic import ListView
+from django.db.models import Sum
+from .models import Facturation
+from datetime import datetime
 
 class ActivityListView(LoginRequiredMixin, ListView):
     login_url = 'login'
@@ -392,23 +375,41 @@ class ActivityListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         # Récupérer les paramètres de filtre
-        date_str = self.request.GET.get('date')          # 'YYYY-MM-DD' ou 'DD/MM/YYYY'
-        start_date_str = self.request.GET.get('start_date')
+        date_str = self.request.GET.get('date')          # format attendu: 'YYYY-MM-DD' ou 'DD/MM/YYYY'
+        start_date_str = self.request.GET.get('start_date')  # format ISO ou européen
         end_date_str = self.request.GET.get('end_date')
-        year_str = self.request.GET.get('year')            # ex: '2025'
+        year_str = self.request.GET.get('year')            # par exemple: '2025'
 
         if date_str:
-            filter_date = parse_flex_date(date_str)
+            # Tenter de parser en format ISO, sinon format européen
+            try:
+                filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    filter_date = datetime.strptime(date_str, '%d/%m/%Y').date()
+                except ValueError:
+                    filter_date = None
             if filter_date:
                 queryset = queryset.filter(date_facture=filter_date)
-
         elif start_date_str and end_date_str:
-            start_date = parse_flex_date(start_date_str)
-            end_date   = parse_flex_date(end_date_str)
+            # Tenter de parser start_date
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    start_date = datetime.strptime(start_date_str, '%d/%m/%Y').date()
+                except ValueError:
+                    start_date = None
+            # Tenter de parser end_date
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    end_date = datetime.strptime(end_date_str, '%d/%m/%Y').date()
+                except ValueError:
+                    end_date = None
             if start_date and end_date:
-                queryset = queryset.filter(date_facture__gte=start_date,
-                                           date_facture__lte=end_date)
-
+                queryset = queryset.filter(date_facture__gte=start_date, date_facture__lte=end_date)
         elif year_str:
             # Filtrer par année
             try:
@@ -417,14 +418,17 @@ class ActivityListView(LoginRequiredMixin, ListView):
             except ValueError:
                 pass
 
+        # Vous pouvez ajouter d'autres filtres si nécessaire.
         return queryset.order_by('date_facture')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Récupérer les filtres pour les réafficher (optionnel)
         context['date'] = self.request.GET.get('date', '')
         context['start_date'] = self.request.GET.get('start_date', '')
         context['end_date'] = self.request.GET.get('end_date', '')
         context['year'] = self.request.GET.get('year', '')
+        # Calculer les totaux pour les trois dernières colonnes
         aggregates = self.get_queryset().aggregate(
             sum_total_acte=Sum('total_acte'),
             sum_tiers_payant=Sum('tiers_payant'),
@@ -435,8 +439,17 @@ class ActivityListView(LoginRequiredMixin, ListView):
         context['sum_total_paye'] = aggregates['sum_total_paye'] or 0
         return context
 
+# comptabilite/views.py
 
-# ========== Chèques (listing / choix date / remise / impression) ==========
+from django.shortcuts import render, redirect
+from datetime import datetime, date
+from django.db.models import Sum
+from .models import Paiement
+
+from django.shortcuts import render, redirect
+from datetime import date
+from django.db.models import Sum
+from .models import Paiement
 
 @login_required
 def cheque_listing(request):
@@ -466,7 +479,11 @@ def cheque_listing(request):
     })
 
 
-@login_required
+
+
+from datetime import date, datetime
+from django.shortcuts import render, redirect
+
 def choix_date_cheques(request):
     """
     Permet de choisir la date pour la remise des chèques.
@@ -481,61 +498,81 @@ def choix_date_cheques(request):
         elif option == 'other':
             other_date = request.POST.get('other_date')
             if other_date:
-                parsed = parse_flex_date(other_date)
-                if parsed:
+                # On s'assure que la date est valide ; ici, on suppose qu'elle est saisie en format ISO.
+                try:
+                    datetime.strptime(other_date, '%Y-%m-%d')
                     return redirect(f"/facturation/cheques/?date={other_date}")
-                else:
-                    context = {'error': "Format de date invalide. Utilisez AAAA-MM-JJ ou JJ/MM/AAAA."}
+                except ValueError:
+                    # Si la date n'est pas au format attendu, on peut réafficher le formulaire avec une erreur.
+                    context = {'error': "Format de date invalide. Veuillez utiliser le format AAAA-MM-JJ."}
                     return render(request, 'comptabilite/choix_date_cheques.html', context)
     return render(request, 'comptabilite/choix_date_cheques.html', {})
 
+
+from django.forms.widgets import NumberInput
 
 class IntegerNumberInput(NumberInput):
     def format_value(self, value):
         if value is None or value == '':
             return ''
         try:
+            # Convertir en entier pour enlever les décimales.
             return str(int(round(float(value))))
         except (ValueError, TypeError):
             return super().format_value(value)
 
+import pdfkit
+from django.shortcuts import render, redirect
+from django.http import HttpResponse
+from django.conf import settings
+from .models import Paiement
+from django.utils import timezone
+from django.template.loader import render_to_string
 
-@login_required
 def remise_cheque(request):
     """
     Affiche la liste des paiements (chèques) non listés et à date <= aujourd'hui,
     puis, quand on valide (POST), marque 'listé' = True et renvoie le PDF.
     """
-    today_local = timezone.localdate()
+    today = timezone.localdate()
 
+    # Si on vient de valider le formulaire (méthode POST)
     if request.method == 'POST':
+        # Récupère tous les chèques encore non listés, date <= aujourd'hui
         cheques = Paiement.objects.filter(
             modalite_paiement='Chèque',
-            date__lte=today_local,
+            date__lte=today,
             liste=False
         )
+        # Marquer chacun comme listé
         cheques.update(liste=True)
 
+        # Recalculer le contexte pour le PDF
         count = cheques.count()
         total = cheques.aggregate(total=models.Sum('montant'))['total'] or 0
 
         context = {
             'cheques': cheques,
             'count': count,
-            'date_cheque': today_local.strftime('%d/%m/%Y'),
+            'date_cheque': today.strftime('%d/%m/%Y'),
             'total_montant': total,
         }
 
+        # Rendre le HTML du bordereau
         html = render_to_string('comptabilite/remise_cheque_pdf.html', context)
-        pdf = pdfkit.from_string(html, False, options=getattr(settings, 'PDFKIT_OPTIONS', {}))
 
+        # Générer le PDF
+        pdf = pdfkit.from_string(html, False, options=settings.PDFKIT_OPTIONS)
+
+        # Renvoyer le PDF au navigateur
         response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="remise_cheque_{today_local}.pdf"'
+        response['Content-Disposition'] = f'attachment; filename="remise_cheque_{today}.pdf"'
         return response
 
+    # Sinon (GET), on affiche le listing et le bouton de validation
     cheques = Paiement.objects.filter(
         modalite_paiement='Chèque',
-        date__lte=today_local,
+        date__lte=today,
         liste=False
     )
     count = cheques.count()
@@ -544,17 +581,40 @@ def remise_cheque(request):
     return render(request, 'comptabilite/remise_cheque.html', {
         'cheques': cheques,
         'count': count,
-        'date_cheque': today_local.strftime('%d/%m/%Y'),
+        'date_cheque': today.strftime('%d/%m/%Y'),
         'total_montant': total,
     })
 
+import io
+from datetime import datetime, date
+from django.db.models import Sum
+from django.shortcuts import redirect
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.pdfgen import canvas
+from .models import Paiement
 
-@login_required
 def print_cheque_listing(request):
+    from datetime import datetime, date
+    import io
+    from django.db.models import Sum
+    from django.http import HttpResponse
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from reportlab.pdfgen import canvas
+    from .models import Paiement
+
     # 1. Récupération de la date
     d_str = request.GET.get('date')
     if d_str:
-        filter_date = parse_flex_date(d_str) or date.today()
+        try:
+            filter_date = datetime.strptime(d_str, '%Y-%m-%d').date()
+        except ValueError:
+            try:
+                filter_date = datetime.strptime(d_str, '%d/%m/%Y').date()
+            except ValueError:
+                filter_date = date.today()
     else:
         filter_date = date.today()
 
@@ -565,9 +625,10 @@ def print_cheque_listing(request):
         liste=False
     ).order_by('date')
 
-    # 3. On cache en mémoire AVANT le .update()
+    # 3. On cashe en mémoire AVANT le .update()
     cheques = list(qs)
     if not cheques:
+        # rien à lister → retour à la liste
         return redirect('cheque_listing')
 
     count = len(cheques)
@@ -586,12 +647,13 @@ def print_cheque_listing(request):
     c.drawString(2*cm, y, "Dr. Jean-Ariel BRONSTEIN | Gastroentérologue")
     y -= 1*cm
 
+    y = height - 2*cm
     c.setFont('Helvetica-Bold', 16)
     c.drawString(2*cm, y, "Rue Lagarde | Papeete")
     y -= 1*cm
 
     c.setFont('Helvetica-Bold', 16)
-    c.drawString(2*cm, y, f"Remise de {count} Chèque(s)")
+    c.drawString(2*cm, y, f"Remise de {count} Chèqu(es)")
     y -= 1*cm
 
     c.setFont('Helvetica', 12)
@@ -627,7 +689,7 @@ def print_cheque_listing(request):
     # Total en bas
     y -= 1*cm
     c.setFont('Helvetica-Bold', 12)
-    c.drawString(2*cm, y, f"Nombre de chèque(s) : {count}   Total des montants : {int(total_montant)}")
+    c.drawString(2*cm, y, f"Nombre de chèque(s) : {count}   Total des montants : {int(total_montant)}")
 
     c.save()
     buffer.seek(0)
@@ -638,31 +700,43 @@ def print_cheque_listing(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
-
-# ========== Numéro facture util ==========
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.utils import timezone
+from .models import Facturation
 
 def generate_numero(request, pk):
     """
     Génère et sauvegarde un numero_facture pour la Facturation pk
-    si elle n'en a pas encore et que parcours_soin == False (et pas Clinique).
+    si elle n'en a pas encore et que parcours_soin == False.
     """
     facture = get_object_or_404(Facturation.objects.select_related('code_acte'), pk=pk)
     code = facture.code_acte
-    if (
-        not facture.numero_facture
-        and not (code and code.parcours_soin)
-        and (getattr(facture, 'lieu_acte', '') or '').lower() != 'clinique'
-    ):
-        now_local = timezone.localtime()
+    # seulement si pas déjà généré et hors parcours de soins
+    if not facture.numero_facture and not (code and code.parcours_soin):
+        now = timezone.localtime()
         facture.numero_facture = (
-            f"JA/{now_local.year}/{now_local.month:02d}/{now_local.day:02d}/"
-            f"{now_local.hour:02d}:{now_local.minute:02d}"
+            f"JA/{now.year}/{now.month:02d}/{now.day:02d}/"
+            f"{now.hour:02d}:{now.minute:02d}"
         )
         facture.save(update_fields=['numero_facture'])
     return JsonResponse({'numero_facture': facture.numero_facture or ""})
 
+# views.py
 
-# ========== Comptabilité: summaries / pivots ==========
+from django.views.generic import ListView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count, Sum
+from django.utils import timezone
+from datetime import timedelta
+from .models import Facturation
+
+from django.views.generic import ListView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count, Sum
+from django.utils import timezone
+from datetime import timedelta
+from .models import Facturation
 
 class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
     login_url = 'login'
@@ -674,18 +748,18 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         qs = super().get_queryset()
         period = self.request.GET.get('period', '')
-        today_local = timezone.localdate()
+        today = timezone.localdate()
 
         if period == 'today':
-            qs = qs.filter(date_facture=today_local)
+            qs = qs.filter(date_facture=today)
         elif period == 'week':
-            start = today_local - timedelta(days=today_local.weekday())
+            start = today - timedelta(days=today.weekday())
             end = start + timedelta(days=6)
             qs = qs.filter(date_facture__range=(start, end))
         elif period == 'month':
-            qs = qs.filter(date_facture__year=today_local.year, date_facture__month=today_local.month)
+            qs = qs.filter(date_facture__year=today.year, date_facture__month=today.month)
         elif period == 'year':
-            qs = qs.filter(date_facture__year=today_local.year)
+            qs = qs.filter(date_facture__year=today.year)
 
         return qs
 
@@ -693,6 +767,7 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         qs = self.get_queryset()
 
+        # Période (pour réaffichage)
         ctx['period_choices'] = [
             ('', 'Toutes'),
             ('today', "Aujourd'hui"),
@@ -702,6 +777,7 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
         ]
         ctx['period'] = self.request.GET.get('period', '')
 
+        # Lecture des cases à cocher
         ctx['group_regime']    = bool(self.request.GET.get('group_regime'))
         ctx['group_modalite']  = bool(self.request.GET.get('group_modalite'))
         ctx['group_code_reel'] = bool(self.request.GET.get('group_code_reel'))
@@ -714,7 +790,8 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
                          count=Count('id'),
                          total_acte=Sum('total_acte'),
                          total_paye=Sum('total_paye')
-                     ))
+                     )
+                  )
         else:
             rows = []
         ctx['pivot_regime'] = rows
@@ -733,7 +810,8 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
                          total_acte=Sum('total_acte'),
                          total_paye=Sum('total_paye')
                      )
-                     .order_by('paiement__modalite_paiement'))
+                     .order_by('paiement__modalite_paiement')
+                  )
             rows_mod = [
                 {'label': r['paiement__modalite_paiement'], **r}
                 for r in tmp
@@ -756,7 +834,8 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
                          total_acte=Sum('total_acte'),
                          total_paye=Sum('total_paye')
                      )
-                     .order_by('code_acte__code_reel'))
+                     .order_by('code_acte__code_reel')
+                  )
             rows_code = [
                 {'code_reel': r['code_acte__code_reel'], **r}
                 for r in tmp
@@ -778,7 +857,8 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
                          total_acte=Sum('total_acte'),
                          total_paye=Sum('total_paye')
                      )
-                     .order_by('lieu_acte'))
+                     .order_by('lieu_acte')
+                  )
             rows_lieu = [
                 {'lieu_acte': r['lieu_acte'], **r}
                 for r in tmp
@@ -795,15 +875,19 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
         return ctx
 
 
-# ========== Prévisions d’hospitalisation (CRUD + PDF + Email) ==========
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import PrevisionHospitalisation
+from .forms import PrevisionHospitalisationForm
+
+from django.utils.timezone import localtime
 
 def prevision_list(request):
     previsions = PrevisionHospitalisation.objects.all().order_by('-date_entree')
-    today_local = localtime().date()
+    today = localtime().date()
 
     return render(request, 'comptabilite/prevision_list.html', {
         'previsions': previsions,
-        'today': today_local,
+        'today': today,
     })
 
 
@@ -814,11 +898,13 @@ def prevision_create(request):
         return redirect('prevision_list')
     return render(request, 'comptabilite/prevision_form.html', {'form': form})
 
-
 def prevision_detail(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
     return render(request, 'comptabilite/prevision_detail.html', {'prevision': prevision})
 
+from django.conf import settings
+from weasyprint import HTML, CSS
+import os
 
 def prevision_pdf(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
@@ -842,6 +928,12 @@ def prevision_pdf(request, pk):
         response['Content-Disposition'] = f'inline; filename="prevision_{prevision.pk}.pdf"'
         return response
 
+from django.core.mail import EmailMessage
+from django.template.loader import get_template
+from weasyprint import HTML, CSS
+import tempfile
+import os
+from django.conf import settings
 
 def prevision_send_email(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
@@ -899,7 +991,6 @@ def prevision_update(request, pk):
         return redirect('prevision_list')
     return render(request, 'comptabilite/prevision_form.html', {'form': form})
 
-
 def prevision_delete(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
     if request.method == 'POST':
@@ -907,14 +998,16 @@ def prevision_delete(request, pk):
         return redirect('prevision_list')
     return render(request, 'comptabilite/prevision_confirm_delete.html', {'prevision': prevision})
 
-
-# ========== Mini chat ==========
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404
+from .models import Message
+from django.contrib.auth.models import User
 
 @login_required
 def chat_view(request, receiver_id):
     receiver = get_object_or_404(User, pk=receiver_id)
     return render(request, 'comptabilite/chat.html', {'receiver': receiver})
-
 
 @login_required
 def get_messages(request):
@@ -924,7 +1017,7 @@ def get_messages(request):
     ) | Message.objects.filter(
         sender_id=receiver_id, receiver=request.user
     )
-    # marquer les messages reçus comme lus
+    # ✅ marquer les messages reçus comme lus
     Message.objects.filter(sender_id=receiver_id, receiver=request.user, lu=False).update(lu=True)
 
     data = [{
@@ -950,14 +1043,26 @@ def send_message(request):
         )
         return JsonResponse({'status': 'ok'})
 
-
-# ========== Patients hospitalisés (liste / PDF / Excel) ==========
+from django.utils import timezone
+from django.shortcuts import render
+from django.db.models import Q
+from .models import PrevisionHospitalisation
 
 @login_required
 def patients_hospitalises(request):
     context = get_patients_hospitalises()
     return render(request, "comptabilite/patients_hospitalises.html", context)
 
+from django.template.loader import get_template
+from weasyprint import HTML
+from django.http import HttpResponse
+from django.utils.timezone import now
+from django.db.models import Q
+from .models import PrevisionHospitalisation
+import tempfile
+
+from weasyprint import HTML, CSS
+import os
 
 @login_required
 def patients_hospitalises_pdf(request):
@@ -965,6 +1070,8 @@ def patients_hospitalises_pdf(request):
     context['user'] = request.user
 
     html_string = render_to_string("comptabilite/patients_hospitalises_pdf.html", context)
+
+    # Chemin absolu du fichier CSS
     css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
 
     pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
@@ -976,27 +1083,32 @@ def patients_hospitalises_pdf(request):
     return response
 
 
+
+
 def get_patients_hospitalises():
-    today_local = now().date()
+    today = now().date()
     qs = PrevisionHospitalisation.objects.filter(
-        date_entree__lte=today_local
+        date_entree__lte=today
     ).filter(
-        Q(date_sortie__gte=today_local) | Q(date_sortie__isnull=True)
+        Q(date_sortie__gte=today) | Q(date_sortie__isnull=True)
     )
     return {
-        "today_formatted": today_local,  # laisser le formatage à Django
+        "today_formatted": today,  # ← on laisse le formatage à Django
         "bloc": qs.filter(lieu_hospitalisation='Bloc'),
         "medecine": qs.filter(lieu_hospitalisation='Médecine'),
         "soins_continus": qs.filter(lieu_hospitalisation='Soins continus'),
     }
 
 
-@login_required
+
+import openpyxl
+from django.http import HttpResponse
+
 def patients_hospitalises_excel(request):
-    today_local = timezone.localdate()
+    today = timezone.localdate()
     hospitalises = PrevisionHospitalisation.objects.filter(
-        date_entree__lte=today_local
-    ).filter(Q(date_sortie__gte=today_local) | Q(date_sortie__isnull=True))
+        date_entree__lte=today
+    ).filter(Q(date_sortie__gte=today) | Q(date_sortie__isnull=True))
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -1006,26 +1118,42 @@ def patients_hospitalises_excel(request):
     ws.append(headers)
 
     for p in hospitalises:
-        sortie_theorique = p.date_sortie or (p.date_entree + dt_module.timedelta(days=1))
+        sortie_theorique = p.date_sortie or (p.date_entree + timezone.timedelta(days=1))
         ws.append([
             p.dn, p.nom, p.prenom,
-            p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '',
+            p.date_naissance.strftime('%d/%m/%Y'),
             p.date_entree.strftime('%d/%m/%Y') if p.date_entree else '',
-            sortie_theorique.strftime('%d/%m/%Y') if sortie_theorique else '',
+            sortie_theorique.strftime('%d/%m/%Y'),
             p.date_sortie.strftime('%d/%m/%Y') if p.date_sortie else '',
             p.lieu_hospitalisation
         ])
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename=patients_hospitalises_{today_local}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename=patients_hospitalises_{today}.xlsx'
     wb.save(response)
     return response
 
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from .models import Facturation
+from django.utils.formats import date_format
+from django.utils.translation import activate
+from reportlab.lib.styles import getSampleStyleSheet
+import datetime
 
-# ========== Impression fiche facturation (PDF) ==========
-
-@login_required
 def imprimer_fiche_facturation(request, pk):
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from decimal import Decimal
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from .models import Facturation
+    from django.shortcuts import get_object_or_404
+
     activate('fr')  # Pour forcer les dates au format français
 
     facture = get_object_or_404(Facturation, pk=pk)
@@ -1056,6 +1184,8 @@ def imprimer_fiche_facturation(request, pk):
         f"Date de la facture : {date_format(facture.date_facture, 'd F Y') if facture.date_facture else ''}",
         f"Code Acte : {facture.code_acte.code_acte if facture.code_acte else ''}",
         f"Montant total : {facture.total_acte} XPF",
+        #f"Tiers Payant : {facture.tiers_payant or 0} XPF",
+        #f"Total Payé : {facture.total_paye or 0} XPF",
         "",
         f"Payé le : {today_str}",
         "",
@@ -1067,3 +1197,6 @@ def imprimer_fiche_facturation(request, pk):
 
     c.save()
     return response
+
+
+

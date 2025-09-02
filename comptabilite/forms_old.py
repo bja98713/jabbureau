@@ -89,29 +89,21 @@ class FacturationForm(forms.ModelForm):
     def save(self, commit=True):
         creating = self.instance._state.adding  # fiable
         fact = super().save(commit=False)
-        # Régime LM déduit du total_paye
         fact.regime_lm = (fact.total_paye in (0, 230, 396))
 
-        # Respecte la saisie éventuelle de l'utilisateur
         user_num = self.cleaned_data.get('numero_facture')
         if user_num:
             fact.numero_facture = user_num
 
-        # 🔒 Verrou clinique : jamais de numéro et surtout pas d'incrément
-        if (getattr(fact, 'lieu_acte', '') or '').lower() == 'clinique':
-            fact.numero_facture = ''
-
         if commit:
             fact.save()
 
-            # Incrémente le compteur UNIQUEMENT si création ET pas Clinique ET numéro réellement attribué
-            if creating and (getattr(fact, 'lieu_acte', '') or '').lower() != 'clinique' and fact.numero_facture:
+            if creating:
                 param = ParametrageFacturation.objects.first()
                 if param:
                     param.prochain_numero += 1
                     param.save()
 
-            # Gestion du paiement
             modalite = self.cleaned_data.get('modalite_paiement')
             if modalite:
                 paiement, _ = Paiement.objects.get_or_create(facture=fact)

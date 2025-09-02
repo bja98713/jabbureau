@@ -187,6 +187,55 @@ $(document).ready(function(){
     });
   });
 </script>
+<script>
+  $(function(){
+    function isClinique(){ return ($('#id_lieu_acte').val() || '').toLowerCase() === 'clinique'; }
+
+    // Expose ou redéfinis ces fonctions si elles existent déjà
+    window.toggleLmAlert = function(){
+      var lm = $('#id_regime_lm').is(':checked');
+      $('#lm-alert').toggle(lm && !isClinique());
+      $('#id_numero_facture').prop('required', lm && !isClinique());
+    };
+    window.toggleTpAlert = function(){
+      var tp = $('#id_regime_tp').is(':checked');
+      $('#tp-alert').toggle(tp && !isClinique());
+      $('#id_numero_facture').prop('required', tp && !isClinique());
+    };
+
+    function toggleNumeroFactureByLieu(){
+      const clinique = isClinique();
+      const $row = $('#div_numero_facture');
+      const $input = $('#id_numero_facture');
+
+      if (clinique) {
+        $row.hide();
+        $input.val('').prop('required', false).prop('disabled', true);
+        $('#lm-alert, #tp-alert').hide();
+      } else {
+        $row.show();
+        $input.prop('disabled', false);
+        toggleLmAlert();
+        toggleTpAlert();
+      }
+    }
+
+    // Hooks
+    $('#id_lieu_acte').on('change', function(){
+      toggleNumeroFactureByLieu();
+    });
+    $('#id_regime_lm').on('change', toggleLmAlert);
+    $('#id_regime_tp').on('change', toggleTpAlert);
+
+    // Initialisation après chargement
+    setTimeout(function(){
+      toggleNumeroFactureByLieu();
+      toggleLmAlert();
+      toggleTpAlert();
+    }, 200);
+  });
+</script>
+
 
 
 {% endblock %}

@@ -212,6 +212,45 @@ class Facturation(models.Model):
 
     def __str__(self):
         return f"Facture n°{self.numero_facture} - {self.nom} {self.prenom}"
+    
+    def _assign_numero_si_besoin(self):
+        """
+        Assigne un numéro en s'appuyant sur ParametrageFacturation (compteur global),
+        mais uniquement si aucun numéro n'est déjà présent.
+        """
+        if self.numero_facture:
+            return
+
+        # Incrément protégé (verrou SQL) pour éviter les collisions en concurrence
+        from .models import ParametrageFacturation  # import local pour éviter les cycles
+        with transaction.atomic():
+            cfg = ParametrageFacturation.objects.select_for_update().first()
+            if cfg is None:
+                cfg = ParametrageFacturation.objects.create(prochain_numero=1)
+            numero = cfg.prochain_numero
+            cfg.prochain_numero = numero + 1
+            cfg.save(update_fields=['prochain_numero'])
+
+        # ⚠️ Formate le numéro ici comme tu le souhaites (je mets juste l'entier)
+        self.numero_facture = str(numero)
+
+    def save(self, *args, **kwargs):
+        """
+        Verrou dur :
+        - Si lieu_acte == 'Clinique' → on NE prend PAS de numéro (on n'incrémente rien),
+          et on force numero_facture vide.
+        - Sinon → on assigne un numéro uniquement si self.numero_facture est vide.
+        """
+        if (getattr(self, 'lieu_acte', '') or '').lower() == 'clinique':
+            # Important : ne surtout pas consommer le compteur ici
+            self.numero_facture = ''
+            return super().save(*args, **kwargs)
+
+        # Hors Clinique → assigner si besoin (et donc consommer le compteur ici, et ici SEULEMENT)
+        if not getattr(self, 'numero_facture', ''):
+            self._assign_numero_si_besoin()
+
+        return super().save(*args, **kwargs)
 
 # Nouvelle table Paiement
 class Paiement(models.Model):
