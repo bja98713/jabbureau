@@ -68,27 +68,60 @@ def parse_flex_date(s: str | None) -> dt_module.date | None:
 
 class FacturationSearchListView(LoginRequiredMixin, ListView):
     login_url = 'login'
-    redirect_field_name = 'next'   # paramètre renvoyé après login
+    redirect_field_name = 'next'
     model = Facturation
     template_name = 'comptabilite/facturation_search_list.html'
     context_object_name = 'facturations'
 
     def get_queryset(self):
+        import re
         qs = super().get_queryset()
 
-        # 1) Recherche textuelle "q"
-        q = self.request.GET.get('q')
+        q = (self.request.GET.get('q') or '').strip()
         if q:
-            qs = qs.filter(
+            # Recherche texte habituelle
+            text_q = (
                 Q(dn__icontains=q) |
                 Q(nom__icontains=q) |
                 Q(prenom__icontains=q) |
                 Q(numero_facture__icontains=q) |
-                Q(date_acte__icontains=q) |
                 Q(code_acte__code_acte__icontains=q)
             )
 
-        # 2) Filtrage selon la période
+            # Recherche date intelligente
+            date_q = Q()
+            # 1) Jour exact (JJ/MM/AAAA ou AAAA-MM-JJ)
+            d = parse_flex_date(q)
+            if d:
+                date_q |= Q(date_acte=d)
+
+            # 2) Mois/Année (MM/AAAA)
+            m = re.fullmatch(r'(?P<mois>0[1-9]|1[0-2])/(?P<an>\d{4})', q)
+            if m:
+                an = int(m.group('an'))
+                mois = int(m.group('mois'))
+                from calendar import monthrange
+                first_day = date(an, mois, 1)
+                last_day = date(an, mois, monthrange(an, mois)[1])
+                date_q |= Q(date_acte__range=(first_day, last_day))
+
+            # 3) Mois/Année (AAAA-MM)
+            m = re.fullmatch(r'(?P<an>\d{4})-(?P<mois>0[1-9]|1[0-2])', q)
+            if m:
+                an = int(m.group('an'))
+                mois = int(m.group('mois'))
+                from calendar import monthrange
+                first_day = date(an, mois, 1)
+                last_day = date(an, mois, monthrange(an, mois)[1])
+                date_q |= Q(date_acte__range=(first_day, last_day))
+
+            # 4) Année (AAAA)
+            if re.fullmatch(r'\d{4}', q):
+                date_q |= Q(date_acte__year=int(q))
+
+            qs = qs.filter(text_q | date_q)
+
+        # Filtres période existants
         today = timezone.localdate()
         if self.request.GET.get('today'):
             qs = qs.filter(date_acte=today)
@@ -96,17 +129,15 @@ class FacturationSearchListView(LoginRequiredMixin, ListView):
         if self.request.GET.get('week'):
             start_of_week = today - timedelta(days=today.weekday())
             end_of_week   = start_of_week + timedelta(days=6)
-            qs = qs.filter(date_acte__gte=start_of_week,
-                           date_acte__lte=end_of_week)
+            qs = qs.filter(date_acte__gte=start_of_week, date_acte__lte=end_of_week)
 
         if self.request.GET.get('month'):
             first_of_month = today.replace(day=1)
-            last_day       = calendar.monthrange(today.year, today.month)[1]
-            last_of_month  = today.replace(day=last_day)
-            qs = qs.filter(date_acte__gte=first_of_month,
-                           date_acte__lte=last_of_month)
+            from calendar import monthrange
+            last_of_month  = date(today.year, today.month, monthrange(today.year, today.month)[1])
+            qs = qs.filter(date_acte__gte=first_of_month, date_acte__lte=last_of_month)
 
-        return qs.order_by('-date_acte')  # ou l'ordre que vous préférez
+        return qs.order_by('-date_acte')
 
 
 class FacturationListView(LoginRequiredMixin, ListView):
