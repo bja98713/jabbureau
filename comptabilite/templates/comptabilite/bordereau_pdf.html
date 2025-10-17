@@ -4,51 +4,92 @@
   <meta charset="UTF-8">
   <title>Bordereau PDF</title>
   <style>
-  /* Optionnel : vos styles CSS de base pour le PDF, e.g. table, titres, etc. */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  th, td {
-    border: 1px solid #000;
-    padding: 4px 8px;
-  }
+    @page {
+  size: A4;
+  margin: 15mm;
+}
+html, body {
+  font-family: Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.3;
+  color: #000;
+}
+.container {
+  max-width: 170mm;  /* < A4 width 210mm - margins */
+  margin: 0 auto;    /* centre horizontalement */
+}
+h1 {
+  font-size: 14pt;
+  text-align: center;
+  margin: 0 0 6mm 0;
+}
+p {
+  margin: 0 0 3mm 0;
+}
+.separator {
+  border-top: 1px solid #000;
+  margin: 4mm 0;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 10pt;
+}
+th, td {
+  border: 1px solid #000;
+  padding: 3px 6px;
+  word-wrap: break-word;
+}
+thead th {
+  text-align: left;
+  background: #f3f3f3;
+}
+.right { text-align: right; }
+.center { text-align: center; }
   </style>
 </head>
 <body>
-  <h1>Bordereau d'Envoi</h1>
-  <h1>Professionnel de santé : M | Gastro-entérologue</h1>
-  <p><strong>Numéro de bordereau :</strong> {{ num_bordereau }}</p>
-  <p><strong>Date du bordereau :</strong> {{ date_bordereau }}</p>
-  <p><strong>Code Praticien : M 3 0 8 9</strong></p>
-  <p><strong>N° Destinataire : T 0 0 0 3 1 7 0</strong></p>
-  <p>-----------------------------------------------------------</p>
-  <p><strong>Nombre de factures :</strong> {{ count }}</p>
-  <p><strong>Total Part CPS :</strong> {{ total_tiers_payant }} XPF</p>
-  <p>-----------------------------------------------------------</p>
-  <table>
-    <thead>
-      <tr>
-        <th>Numéro facture</th>
-        <th>DN</th>
-        <th>Nom</th>
-        <th>Prénom</th>
-        <th>Date facture</th>
-        <th>Part CPS</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for facture in factures %}
-      <tr>
-        <td>{{ facture.numero_facture }}</td>
-        <td>{{ facture.dn }}</td>
-        <td>{{ facture.nom }}</td>
-        <td>{{ facture.prenom }}</td>
-        <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
-        <td>{{ facture.tiers_payant }} XPF</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="container">
+    <h1>Bordereau d'Envoi</h1>
+    <h1 class="center">Professionnel de santé : M | Gastro-entérologue</h1>
+
+    <p><strong>Numéro de bordereau :</strong> {{ num_bordereau }}</p>
+    <p><strong>Date du bordereau :</strong> {{ date_bordereau }}</p>
+    <p><strong>Code Praticien :</strong> M 3 0 8 9</p>
+    <p><strong>N° Destinataire :</strong> T 0 0 0 3 1 7 0</p>
+
+    <div class="separator"></div>
+
+    <p><strong>Nombre de factures :</strong> {{ count }}</p>
+    <p><strong>Total Part CPS :</strong> <span class="right">{{ total_tiers_payant }} xpf</span></p>
+
+    <div class="separator"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Numéro facture</th>
+          <th>DN</th>
+          <th>Nom</th>
+          <th>Prénom</th>
+          <th>Date facture</th>
+          <th class="right">Part CPS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for facture in factures %}
+        <tr>
+          <td>{{ facture.numero_facture }}</td>
+          <td>{{ facture.dn }}</td>
+          <td>{{ facture.nom }}</td>
+          <td>{{ facture.prenom }}</td>
+          <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
+          <td class="right">{{ facture.tiers_payant }} xpf</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </body>
 </html>

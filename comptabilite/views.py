@@ -311,7 +311,7 @@ def print_facture(request, pk):
     c.drawString(2.0 * cm, hauteur - 13.0 * cm, f"{nom_medecin}")
     c.drawString(2.0 * cm, hauteur - 13.5 * cm, f"{nom_clinique}")
     c.drawString(10.5 * cm, hauteur - 12.6 * cm, f"{code_m}")
-    c.drawString(2.5 * cm, hauteur - 14.8 * cm, f"{ps}")
+    c.drawString(2.7 * cm, hauteur - 14.7 * cm, f"{ps}")
     if facture.regime_lm:
         c.drawString(0.3 * cm, hauteur - 16.5 * cm, f"{regime_lm}")
     c.drawString(0.5 * cm, hauteur - 20.3 * cm, f"{date_facture}")
