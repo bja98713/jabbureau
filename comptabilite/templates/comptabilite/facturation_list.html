@@ -32,6 +32,17 @@
       <label class="form-check-label" for="filter-month">Actes du mois</label>
     </div>
   </form>
+  
+  <!-- Boutons d'export Excel -->
+  <div class="mb-3">
+    <a href="{% url 'export_excel_page' %}" class="btn btn-success mr-2">
+      <i class="fas fa-file-excel"></i> Export Excel
+    </a>
+    <a href="{% url 'export_all_data_excel' %}" class="btn btn-outline-success">
+      <i class="fas fa-download"></i> Export Rapide
+    </a>
+  </div>
+  
   <table class="table table-striped text-center">
     <thead class="thead-dark">
       <tr>

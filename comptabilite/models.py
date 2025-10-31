@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 
 class Medecin(models.Model):
     nom_medecin = models.CharField(max_length=100, verbose_name="Nom du Médecin")

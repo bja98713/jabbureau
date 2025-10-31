@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Export Excel des Données de Facturation</h1>
+  
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5>Export Complet</h5>
+        </div>
+        <div class="card-body">
+          <p>Exporter toutes les données de facturation sans filtre.</p>
+          <a href="{% url 'export_all_data_excel' %}" class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Exporter Toutes les Données
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5>Export Filtré</h5>
+        </div>
+        <div class="card-body">
+          <form method="get" action="{% url 'export_filtered_data_excel' %}">
+            <div class="form-group">
+              <label for="date_debut">Date de début :</label>
+              <input type="date" class="form-control" id="date_debut" name="date_debut">
+            </div>
+            
+            <div class="form-group">
+              <label for="date_fin">Date de fin :</label>
+              <input type="date" class="form-control" id="date_fin" name="date_fin">
+            </div>
+            
+            <div class="form-group">
+              <label for="lieu">Lieu :</label>
+              <select class="form-control" id="lieu" name="lieu">
+                <option value="">Tous les lieux</option>
+                <option value="Cabinet">Cabinet</option>
+                <option value="Clinique">Clinique</option>
+              </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-file-excel"></i> Exporter avec Filtres
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mt-4">
+    <h3>Colonnes exportées :</h3>
+    <ul class="list-group">
+      <li class="list-group-item"><strong>Date :</strong> Date de l'acte</li>
+      <li class="list-group-item"><strong>Nom :</strong> Nom complet du patient</li>
+      <li class="list-group-item"><strong>Total :</strong> Montant total de l'acte (en XPF)</li>
+      <li class="list-group-item"><strong>Lieu :</strong> Lieu de l'acte (Cabinet/Clinique)</li>
+      <li class="list-group-item"><strong>Mois :</strong> Numéro du mois</li>
+  <li class="list-group-item"><strong>Année :</strong> Année de l'acte</li>
+  <li class="list-group-item"><strong>Code réel :</strong> Code réel associé à l'acte (si disponible)</li>
+    </ul>
+  </div>
+  
+  <div class="mt-3">
+    <a href="{% url 'facturation_list' %}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Retour à la liste
+    </a>
+  </div>
+</div>
+{% endblock %}

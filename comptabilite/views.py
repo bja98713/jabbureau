@@ -1098,3 +1098,233 @@ def imprimer_fiche_facturation(request, pk):
 
     c.save()
     return response
+
+
+@login_required
+def export_all_data_excel(request):
+    """
+    Exporte toutes les données de facturation en format Excel
+    avec les colonnes : date, nom, total, lieu, mois, annee, code_reel
+    """
+    # Créer un nouveau classeur Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Données Facturation"
+    
+    # Définir les en-têtes de colonnes
+    headers = ['date', 'nom', 'total', 'lieu', 'mois', 'annee', 'code_reel']
+    ws.append(headers)
+    
+    # Styliser les en-têtes
+    from openpyxl.styles import Font, PatternFill, Alignment
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_alignment = Alignment(horizontal="center")
+    
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+    
+    # Récupérer toutes les facturations
+    facturations = Facturation.objects.all().order_by('-date_acte')
+    
+    # Ajouter les données
+    for facturation in facturations:
+        # Préparer les données de la ligne
+        date_acte = facturation.date_acte
+        nom_complet = f"{facturation.nom} {facturation.prenom}"
+        total = float(facturation.total_acte) if facturation.total_acte else 0
+        lieu = facturation.lieu_acte
+        mois = date_acte.month if date_acte else ""
+        annee = date_acte.year if date_acte else ""
+        code_reel = ""
+        if facturation.code_acte and facturation.code_acte.code_reel:
+            code_reel = facturation.code_acte.code_reel
+        
+        # Ajouter la ligne au fichier Excel
+        ws.append([
+            date_acte.strftime('%d/%m/%Y') if date_acte else '',
+            nom_complet,
+            total,
+            lieu,
+            mois,
+            annee,
+            code_reel
+        ])
+    
+    # Ajuster la largeur des colonnes
+    column_widths = {
+        'A': 12,  # Date
+        'B': 25,  # Nom
+        'C': 12,  # Total
+        'D': 15,  # Lieu
+        'E': 8,   # Mois
+        'F': 8,   # Année
+        'G': 15   # Code reel
+    }
+    
+    for column, width in column_widths.items():
+        ws.column_dimensions[column].width = width
+    
+    # Formater la colonne des totaux
+    from openpyxl.styles import NamedStyle
+    currency_style = NamedStyle(name="currency")
+    currency_style.number_format = '#,##0" XPF"'
+    
+    for row in range(2, len(facturations) + 2):
+        ws[f'C{row}'].style = currency_style
+    
+    # Créer la réponse HTTP avec le fichier Excel
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    # Nom du fichier avec la date actuelle
+    from datetime import datetime
+    today = datetime.now().strftime('%Y%m%d')
+    filename = f'facturation_complete_{today}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # Sauvegarder le fichier Excel dans la réponse
+    wb.save(response)
+    
+    return response
+
+
+@login_required
+def export_filtered_data_excel(request):
+    """
+    Exporte les données de facturation avec filtres optionnels
+    Paramètres GET acceptés:
+    - date_debut: date de début (format YYYY-MM-DD)
+    - date_fin: date de fin (format YYYY-MM-DD) 
+    - lieu: filtrer par lieu (Cabinet/Clinique)
+    """
+    # Récupérer les paramètres de filtre
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    lieu_filtre = request.GET.get('lieu')
+    
+    # Créer un nouveau classeur Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Données Facturation Filtrées"
+    
+    # Définir les en-têtes de colonnes
+    headers = ['date', 'nom', 'total', 'lieu', 'mois', 'annee', 'code_reel']
+    ws.append(headers)
+    
+    # Styliser les en-têtes
+    from openpyxl.styles import Font, PatternFill, Alignment
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_alignment = Alignment(horizontal="center")
+    
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+    
+    # Construire la requête avec les filtres
+    queryset = Facturation.objects.all()
+    
+    if date_debut:
+        from datetime import datetime
+        date_debut_obj = datetime.strptime(date_debut, '%Y-%m-%d').date()
+        queryset = queryset.filter(date_acte__gte=date_debut_obj)
+    
+    if date_fin:
+        from datetime import datetime
+        date_fin_obj = datetime.strptime(date_fin, '%Y-%m-%d').date()
+        queryset = queryset.filter(date_acte__lte=date_fin_obj)
+    
+    if lieu_filtre:
+        queryset = queryset.filter(lieu_acte=lieu_filtre)
+    
+    # Ordonner par date décroissante
+    facturations = queryset.order_by('-date_acte')
+    
+    # Ajouter les données
+    for facturation in facturations:
+        # Préparer les données de la ligne
+        date_acte = facturation.date_acte
+        nom_complet = f"{facturation.nom} {facturation.prenom}"
+        total = float(facturation.total_acte) if facturation.total_acte else 0
+        lieu = facturation.lieu_acte
+        mois = date_acte.month if date_acte else ""
+        annee = date_acte.year if date_acte else ""
+        code_reel = ""
+        if facturation.code_acte and facturation.code_acte.code_reel:
+            code_reel = facturation.code_acte.code_reel
+        
+        # Ajouter la ligne au fichier Excel
+        ws.append([
+            date_acte.strftime('%d/%m/%Y') if date_acte else '',
+            nom_complet,
+            total,
+            lieu,
+            mois,
+            annee,
+            code_reel
+        ])
+    
+    # Ajuster la largeur des colonnes
+    column_widths = {
+        'A': 12,  # Date
+        'B': 25,  # Nom
+        'C': 12,  # Total
+        'D': 15,  # Lieu
+        'E': 8,   # Mois
+        'F': 8,   # Année
+        'G': 15   # Code reel
+    }
+    
+    for column, width in column_widths.items():
+        ws.column_dimensions[column].width = width
+    
+    # Formater la colonne des totaux
+    from openpyxl.styles import NamedStyle
+    currency_style = NamedStyle(name="currency_filtered")
+    currency_style.number_format = '#,##0" XPF"'
+    
+    for row in range(2, len(facturations) + 2):
+        ws[f'C{row}'].style = currency_style
+    
+    # Créer la réponse HTTP avec le fichier Excel
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    # Nom du fichier avec la date actuelle et les filtres
+    from datetime import datetime
+    today = datetime.now().strftime('%Y%m%d')
+    filename_parts = ['facturation']
+    
+    if date_debut and date_fin:
+        filename_parts.append(f'{date_debut}_to_{date_fin}')
+    elif date_debut:
+        filename_parts.append(f'from_{date_debut}')
+    elif date_fin:
+        filename_parts.append(f'until_{date_fin}')
+    
+    if lieu_filtre:
+        filename_parts.append(lieu_filtre.lower())
+    
+    filename_parts.append(today)
+    filename = '_'.join(filename_parts) + '.xlsx'
+    
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # Sauvegarder le fichier Excel dans la réponse
+    wb.save(response)
+    
+    return response
+
+
+@login_required
+def export_excel_page(request):
+    """
+    Page d'export des données en Excel avec options de filtrage
+    """
+    return render(request, 'comptabilite/export_excel.html')
