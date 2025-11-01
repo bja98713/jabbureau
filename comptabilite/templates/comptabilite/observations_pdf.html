@@ -5,7 +5,19 @@
   <title>Observations – {{ patient.nom }} {{ patient.prenom }} (DN {{ patient.dn }})</title>
   <style>
     body { font-family: sans-serif; font-size: 12px; }
-    h1 { font-size: 18px; margin-bottom: 0; }
+    .letterhead {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      text-transform: uppercase;
+      font-size: 11px;
+      line-height: 1.25;
+    }
+    .letterhead .name { font-weight: bold; font-size: 12px; }
+    .content { margin-top: 110px; }
+  h1 { font-size: 18px; margin-bottom: 0; text-align: center; }
     .small { color: #555; margin-top: 0; }
     .obs { margin: 12px 0; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; }
     .obs h3 { margin: 0 0 6px 0; font-size: 14px; }
@@ -14,20 +26,30 @@
   </style>
 </head>
 <body>
-  <h1>Observations</h1>
-  <p class="small">Patient : <strong>{{ patient.nom }} {{ patient.prenom }}</strong> — DN {{ patient.dn }} — Naissance : {% if patient.date_naissance %}{{ patient.date_naissance|date:'d/m/Y' }}{% else %}-{% endif %}</p>
+  <div class="letterhead">
+    <div class="name">CLINIQUE PAOFAI</div>
+    <p></p>
+    <div class="name">Dr Jean-Ariel BRONSTEIN</div>
+    <div>Professeur agrégé du Val-de-Grâce</div>
+    <div>Gastro-entérologie et Oncologie digestive</div>
+  </div>
+  <div class="content">
+    <h1>OBSERVATION</h1>
+    <p></p>
+    <p class="small">Patient : <strong>{{ patient.nom }} {{ patient.prenom }}</strong> — DN {{ patient.dn }} — Naissance : {% if patient.date_naissance %}{{ patient.date_naissance|date:'d/m/Y' }}{% else %}-{% endif %}</p>
 
-  {% for obs in observations %}
-    <div class="obs">
-      <h3>{{ obs.date_observation|date:'d/m/Y' }} — {{ obs.motif_consultation }}</h3>
-      <pre>{{ obs.texte_observation }}</pre>
-      {% if obs.conclusion_observation %}
-        <p class="muted"><strong>Conclusion:</strong></p>
-        <pre>{{ obs.conclusion_observation }}</pre>
-      {% endif %}
-    </div>
-  {% empty %}
-    <p>Aucune observation.</p>
-  {% endfor %}
+    {% for obs in observations %}
+      <div class="obs">
+        <h3>{{ obs.date_observation|date:'d/m/Y' }} — {{ obs.motif_consultation }}</h3>
+        <pre>{{ obs.texte_observation }}</pre>
+        {% if obs.conclusion_observation %}
+          <p class="muted"><strong>Conclusion:</strong></p>
+          <pre>{{ obs.conclusion_observation }}</pre>
+        {% endif %}
+      </div>
+    {% empty %}
+      <p>Aucune observation.</p>
+    {% endfor %}
+  </div>
 </body>
 </html>
