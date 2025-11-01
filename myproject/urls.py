@@ -12,5 +12,5 @@ urlpatterns = [
          name='logout'),
     path('admin/', admin.site.urls),
     path('facturation/', include('comptabilite.urls')),
-    path('', RedirectView.as_view(url='facturation/')),  # Redirige '/' vers '/facturation/'
+    path('', RedirectView.as_view(url='facturation/patients/')),  # Redirige '/' vers la liste des patients
 ]

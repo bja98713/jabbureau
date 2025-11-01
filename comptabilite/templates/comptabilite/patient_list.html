@@ -37,6 +37,7 @@
         <td>{% if p.date_naissance %}{{ p.date_naissance|date:'d/m/Y' }}{% endif %}</td>
         <td>
           <a class="btn btn-sm btn-outline-dark" href="{% url 'patients_detail' p.dn %}">Fiche</a>
+          <a class="btn btn-sm btn-outline-danger" href="{% url 'patient_delete' p.dn %}">Supprimer</a>
           <a class="btn btn-sm btn-outline-primary" href="{% url 'observations_by_dn' p.dn %}">Observations</a>
           <a class="btn btn-sm btn-outline-secondary" href="{% url 'observations_pdf' p.dn %}" target="_blank">PDF Observations</a>
         </td>

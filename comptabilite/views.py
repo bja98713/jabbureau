@@ -1347,6 +1347,15 @@ def patient_update(request, dn: str):
 
 
 @login_required
+def patient_delete(request, dn: str):
+    patient = get_object_or_404(Patient, dn=dn)
+    if request.method == 'POST':
+        patient.delete()
+        return redirect('patients_list')
+    return render(request, 'comptabilite/patient_confirm_delete.html', {'patient': patient})
+
+
+@login_required
 def export_all_data_excel(request):
     """
     Exporte toutes les données de facturation en format Excel

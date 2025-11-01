@@ -63,6 +63,7 @@ urlpatterns = [
     path('patients/', views.patients_list, name='patients_list'),
     path('patients/<str:dn>/', views.patients_detail, name='patients_detail'),
     path('patients/<str:dn>/edit/', views.patient_update, name='patient_update'),
+    path('patients/<str:dn>/delete/', views.patient_delete, name='patient_delete'),
     # Observations
     path('observations/', views.observations_patient_list, name='observations_patient_list'),
     path('observations/new/', views.observation_create, name='observation_create'),

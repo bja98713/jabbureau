@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Supprimer le patient{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Confirmer la suppression du patient</h2>
+  <div class="alert alert-warning">
+    <p>Vous êtes sur le point de supprimer la fiche centrale du patient :</p>
+    <ul>
+      <li><strong>DN :</strong> {{ patient.dn }}</li>
+      <li><strong>Nom :</strong> {{ patient.nom }}</li>
+      <li><strong>Prénom :</strong> {{ patient.prenom }}</li>
+      <li><strong>Date de naissance :</strong> {% if patient.date_naissance %}{{ patient.date_naissance|date:'d/m/Y' }}{% else %}—{% endif %}</li>
+    </ul>
+    <p class="mb-0"><em>Remarque :</em> cela n'efface pas les facturations ni les observations historiques (liées par DN). La fiche Patient pourra être recréée automatiquement lors d'une nouvelle facturation/observation.</p>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+    <a href="{% url 'patients_detail' patient.dn %}" class="btn btn-link">Annuler</a>
+  </form>
+</div>
+{% endblock %}
