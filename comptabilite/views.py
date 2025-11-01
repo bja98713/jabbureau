@@ -1137,18 +1137,33 @@ def observations_patient_list(request):
             q_filter |= Q(date_naissance=d)
         obs_base = obs_base.filter(q_filter)
 
-    # DNs distincts (filtrés)
-    dn_list = list(obs_base.values_list('dn', flat=True).distinct())
+    # Charger un sous-ensemble minimal pour agréger côté Python, en normalisant DN (trim)
+    obs_rows = list(obs_base.values('dn', 'nom', 'prenom', 'date_naissance', 'date_observation'))
 
-    # Compter observations par DN (total, pas seulement filtré)
-    obs_counts_map = {
-        r['dn']: r['count']
-        for r in Observation.objects.values('dn').annotate(count=Count('id'))
-    }
+    # Dédoublonner par DN « normalisé » (trim) et calculer compte + dates
+    dn_order = []               # ordre d'apparition
+    obs_counts_map = {}         # dn_norm -> count
+    obs_dates_map = {}          # dn_norm -> [dates]
+    for r in obs_rows:
+        dn_norm = (r['dn'] or '').strip()
+        if not dn_norm:
+            continue
+        if dn_norm not in obs_counts_map:
+            dn_order.append(dn_norm)
+            obs_counts_map[dn_norm] = 0
+            obs_dates_map[dn_norm] = []
+        obs_counts_map[dn_norm] += 1
+        d = r.get('date_observation')
+        if d and d not in obs_dates_map[dn_norm]:
+            obs_dates_map[dn_norm].append(d)
+
+    # Trier les dates décroissantes pour l'affichage
+    for dn_norm in obs_dates_map:
+        obs_dates_map[dn_norm].sort(reverse=True)
 
     # Construire les lignes patient: on privilégie la dernière Facturation si dispo, sinon une Observation
     patients = []
-    for dn in dn_list:
+    for dn in dn_order:
         fact = (
             Facturation.objects
             .filter(dn=dn)
@@ -1167,8 +1182,8 @@ def observations_patient_list(request):
                 .first()
             )
             row = dict(o) if o else {'dn': dn, 'nom': '', 'prenom': '', 'date_naissance': None}
-
         row['obs_count'] = obs_counts_map.get(dn, 0)
+        row['obs_dates'] = obs_dates_map.get(dn, [])
         patients.append(row)
 
     # Tri par nom/prénom
@@ -1286,6 +1301,40 @@ def observations_pdf(request, dn: str):
     response['Content-Disposition'] = f'inline; filename="observations_{dn}.pdf"'
     return response
 
+
+@login_required
+def observation_pdf(request, pk: int):
+    """Génère un PDF pour une seule observation (par pk)."""
+    obs = get_object_or_404(Observation, pk=pk)
+    # Construire identité patient
+    fact = Facturation.objects.filter(dn=obs.dn).order_by('-date_acte').first()
+    class P:
+        pass
+    patient = P()
+    if fact:
+        patient.dn = fact.dn
+        patient.nom = fact.nom
+        patient.prenom = fact.prenom
+        patient.date_naissance = fact.date_naissance
+    else:
+        patient.dn = obs.dn
+        patient.nom = obs.nom
+        patient.prenom = obs.prenom
+        patient.date_naissance = obs.date_naissance
+
+    html_string = render_to_string('comptabilite/observations_pdf.html', {
+        'patient': patient,
+        'observations': [obs],
+        'user': request.user,
+    })
+    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(filename=css_path)]
+    )
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="observation_{pk}.pdf"'
+    return response
+
 @login_required
 def observations_send_email(request, dn: str):
     """Affiche un petit formulaire pour envoyer le PDF des observations par e‑mail, puis envoie en pièce jointe."""
@@ -1366,6 +1415,87 @@ def observations_send_email(request, dn: str):
     return render(request, 'comptabilite/observations_email.html', {
         'patient': patient,
         'dn': dn,
+        'default_subject': default_subject,
+        'default_body': default_body,
+        'default_to': default_to,
+        'default_cc': 'secretariat@bronstein.fr',
+    })
+
+
+@login_required
+def observation_send_email(request, pk: int):
+    """Envoie par e‑mail le PDF d'une observation unique (pk)."""
+    obs = get_object_or_404(Observation, pk=pk)
+    # Identité patient
+    fact = Facturation.objects.filter(dn=obs.dn).order_by('-date_acte').first()
+    class P: pass
+    patient = P()
+    if fact:
+        patient.dn = fact.dn
+        patient.nom = fact.nom
+        patient.prenom = fact.prenom
+        patient.date_naissance = fact.date_naissance
+    else:
+        patient.dn = obs.dn
+        patient.nom = obs.nom
+        patient.prenom = obs.prenom
+        patient.date_naissance = obs.date_naissance
+
+    if request.method == 'POST':
+        to = (request.POST.get('to') or '').strip()
+        cc = (request.POST.get('cc') or '').strip()
+        subject = (request.POST.get('subject') or '').strip() or f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+        body = (request.POST.get('body') or '').strip() or "Bonjour,\n\nVeuillez trouver ci-joint l'observation.\n\nBien cordialement,\nDr. Bronstein"
+        to_list = [a.strip() for a in to.replace(';', ',').split(',') if a.strip()]
+        cc_list = [a.strip() for a in cc.replace(';', ',').split(',') if a.strip()]
+
+        if not to_list:
+            messages.error(request, "Veuillez renseigner au moins un destinataire.")
+            default_subject = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+            default_body = "Bonjour,\n\nVeuillez trouver ci-joint l'observation.\n\nBien cordialement,\nDr. Bronstein"
+            default_to = ", ".join(filter(None, [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']))
+            return render(request, 'comptabilite/observations_email.html', {
+                'patient': patient,
+                'dn': patient.dn,
+                'default_subject': default_subject,
+                'default_body': default_body,
+                'default_to': default_to,
+                'default_cc': cc or 'secretariat@bronstein.fr',
+            })
+
+        # Générer PDF pour une seule observation
+        html_string = render_to_string('comptabilite/observations_pdf.html', {
+            'patient': patient,
+            'observations': [obs],
+            'user': request.user,
+        })
+        css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+        pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+            stylesheets=[CSS(filename=css_path)]
+        )
+        email = EmailMessage(
+            subject=subject,
+            body=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=to_list or [request.user.email] if getattr(request.user, 'email', '') else None,
+        )
+        if cc_list:
+            email.cc = cc_list
+        email.attach(f"observation_{obs.pk}.pdf", pdf_bytes, 'application/pdf')
+        email.send()
+        msg = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} envoyée à: {', '.join(to_list)}"
+        if cc_list:
+            msg += f" (Cc: {', '.join(cc_list)})"
+        messages.success(request, msg)
+        return redirect('observations_by_dn', dn=patient.dn)
+
+    # GET: formulaire par défaut
+    default_subject = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+    default_body = "Bonjour,\n\nVeuillez trouver ci-joint l'observation.\n\nBien cordialement,\nDr. Bronstein"
+    default_to = ", ".join(filter(None, [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']))
+    return render(request, 'comptabilite/observations_email.html', {
+        'patient': patient,
+        'dn': patient.dn,
         'default_subject': default_subject,
         'default_body': default_body,
         'default_to': default_to,

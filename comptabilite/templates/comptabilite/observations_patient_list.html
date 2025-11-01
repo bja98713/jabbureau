@@ -35,7 +35,8 @@
       <th>Prénom</th>
       <th>Date de naissance</th>
       <th>Observations</th>
-      <th>Actions</th>
+  <th>Dates d'observation</th>
+  <th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -50,6 +51,15 @@
             {{ p.obs_count }} existante(s)
           {% else %}
             Aucune
+          {% endif %}
+        </td>
+        <td>
+          {% if p.obs_dates %}
+            {% for d in p.obs_dates %}
+              <span class="badge badge-light">{{ d|date:'d/m/Y' }}</span>
+            {% endfor %}
+          {% else %}
+            –
           {% endif %}
         </td>
         <td class="d-flex gap-2">
