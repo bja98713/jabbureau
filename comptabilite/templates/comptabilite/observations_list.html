@@ -5,6 +5,7 @@
   <h2>Observations – {{ patient.nom }} {{ patient.prenom }} (DN {{ patient.dn }})</h2>
   <div>
     <a class="btn btn-outline-secondary mr-2" href="{% url 'observations_pdf' patient.dn %}" target="_blank">PDF</a>
+    <a class="btn btn-outline-info mr-2" href="{% url 'observations_send_email' patient.dn %}">Envoyer PDF par e‑mail</a>
     <a class="btn btn-primary" href="{% url 'observation_create_for_dn' patient.dn %}">Nouvelle observation</a>
   </div>
 </div>

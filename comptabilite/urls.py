@@ -72,4 +72,5 @@ urlpatterns = [
     path('observations/<int:pk>/edit/', views.observation_update, name='observation_update'),
     path('observations/<int:pk>/delete/', views.observation_delete, name='observation_delete'),
     path('observations/<str:dn>/pdf/', views.observations_pdf, name='observations_pdf'),
+    path('observations/<str:dn>/email/', views.observations_send_email, name='observations_send_email'),
 ]

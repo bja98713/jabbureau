@@ -21,6 +21,7 @@
       <a class="btn btn-primary" href="{% url 'observation_create_for_dn' patient.dn %}">Nouvelle observation</a>
       <a class="btn btn-success" href="{% url 'facturation_create' %}?dn={{ patient.dn|urlencode }}&nom={{ patient.nom|urlencode }}&prenom={{ patient.prenom|urlencode }}&date_naissance={{ patient.date_naissance|date:'Y-m-d'|urlencode }}">Nouvelle facture</a>
       <a class="btn btn-outline-secondary" href="{% url 'observations_pdf' patient.dn %}" target="_blank">PDF des observations</a>
+      <a class="btn btn-outline-info" href="{% url 'observations_send_email' patient.dn %}">Envoyer PDF par e‑mail</a>
       <a class="btn btn-outline-dark" href="{% url 'patient_update' patient.dn %}">Modifier identité</a>
       <a class="btn btn-link" href="{% url 'patients_list' %}">Retour à la liste</a>
     </div>

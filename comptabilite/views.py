@@ -14,6 +14,7 @@ import pdfkit
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db import models
@@ -1285,6 +1286,92 @@ def observations_pdf(request, dn: str):
     response['Content-Disposition'] = f'inline; filename="observations_{dn}.pdf"'
     return response
 
+@login_required
+def observations_send_email(request, dn: str):
+    """Affiche un petit formulaire pour envoyer le PDF des observations par e‑mail, puis envoie en pièce jointe."""
+    # Construire l'identité patient (comme dans observations_pdf)
+    observations = Observation.objects.filter(dn=dn).order_by('date_observation', 'created_at')
+    fact = Facturation.objects.filter(dn=dn).order_by('-date_acte').first()
+    if fact:
+        patient = fact
+    else:
+        any_obs = observations.first()
+        if any_obs:
+            class P: pass
+            patient = P()
+            patient.dn = any_obs.dn
+            patient.nom = any_obs.nom
+            patient.prenom = any_obs.prenom
+            patient.date_naissance = any_obs.date_naissance
+        else:
+            # Rien à envoyer
+            return redirect('patients_detail', dn=dn)
+
+    if request.method == 'POST':
+        to = (request.POST.get('to') or '').strip()
+        cc = (request.POST.get('cc') or '').strip()
+        subject = (request.POST.get('subject') or '').strip() or f"Observations – {patient.nom} {patient.prenom} (DN {dn})"
+        body = (request.POST.get('body') or '').strip() or "Bonjour,\n\nVeuillez trouver ci-joint le PDF des observations.\n\nBien cordialement,\nDr. Bronstein"
+        to_list = [addr.strip() for addr in to.replace(';', ',').split(',') if addr.strip()]
+        cc_list = [addr.strip() for addr in cc.replace(';', ',').split(',') if addr.strip()]
+
+        if not to_list:
+            messages.error(request, "Veuillez renseigner au moins un destinataire.")
+            default_subject = f"Observations – {patient.nom} {patient.prenom} (DN {dn})"
+            default_body = "Bonjour,\n\nVeuillez trouver ci-joint le PDF des observations.\n\nBien cordialement,\nDr. Bronstein"
+            # Par défaut, on met le secrétariat en Cc et non en To
+            default_to = ", ".join(filter(None, [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']))
+            return render(request, 'comptabilite/observations_email.html', {
+                'patient': patient,
+                'dn': dn,
+                'default_subject': default_subject,
+                'default_body': default_body,
+                'default_to': default_to,
+                'default_cc': cc,
+            })
+
+        # Générer le PDF (identique à observations_pdf)
+        html_string = render_to_string('comptabilite/observations_pdf.html', {
+            'patient': patient,
+            'observations': observations,
+            'user': request.user,
+        })
+        css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+        pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+            stylesheets=[CSS(filename=css_path)]
+        )
+
+        email = EmailMessage(
+            subject=subject,
+            body=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=to_list or [request.user.email] if request.user.email else None,
+        )
+        # Ajout des destinataires en copie si fournis
+        if cc_list:
+            email.cc = cc_list
+        email.attach(f"observations_{dn}.pdf", pdf_bytes, 'application/pdf')
+        email.send()
+        success_msg = f"PDF des observations envoyé à: {', '.join(to_list)}"
+        if cc_list:
+            success_msg += f" (Cc: {', '.join(cc_list)})"
+        messages.success(request, success_msg)
+        return redirect('patients_detail', dn=dn)
+
+    # GET: formulaire par défaut
+    default_subject = f"Observations – {patient.nom} {patient.prenom} (DN {dn})"
+    default_body = "Bonjour,\n\nVeuillez trouver ci-joint le PDF des observations.\n\nBien cordialement,\nDr. Bronstein"
+    # Par défaut: To = le médecin + l'utilisateur si possible; Cc = secrétariat
+    default_to = ", ".join(filter(None, [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']))
+    return render(request, 'comptabilite/observations_email.html', {
+        'patient': patient,
+        'dn': dn,
+        'default_subject': default_subject,
+        'default_body': default_body,
+        'default_to': default_to,
+        'default_cc': 'secretariat@bronstein.fr',
+    })
+
 
 # ========== Patients (référentiel central) ==========
 
@@ -1313,7 +1400,42 @@ def patients_list(request):
 @login_required
 def patients_detail(request, dn: str):
     """Fiche patient: infos d'identité et liste des observations, avec actions rapides."""
-    patient = get_object_or_404(Patient, dn=dn)
+    # Tente de charger le patient; si absent, essaie de le créer automatiquement
+    # depuis la dernière Facturation ou une Observation existante pour ce DN.
+    try:
+        patient = Patient.objects.get(dn=dn)
+    except Patient.DoesNotExist:
+        # 1) Source prioritaire: dernière facturation (identité la plus fiable)
+        fact = (Facturation.objects
+                .filter(dn=dn)
+                .order_by('-date_acte', '-id')
+                .first())
+        if fact:
+            patient = Patient.objects.create(
+                dn=dn,
+                nom=fact.nom or '',
+                prenom=fact.prenom or '',
+                date_naissance=fact.date_naissance,
+            )
+            messages.info(request, "Fiche patient créée automatiquement depuis la facturation.")
+        else:
+            # 2) À défaut, on tente depuis une observation existante
+            any_obs = (Observation.objects
+                       .filter(dn=dn)
+                       .order_by('-date_observation', '-created_at')
+                       .first())
+            if any_obs:
+                patient = Patient.objects.create(
+                    dn=dn,
+                    nom=any_obs.nom or '',
+                    prenom=any_obs.prenom or '',
+                    date_naissance=any_obs.date_naissance,
+                )
+                messages.info(request, "Fiche patient créée automatiquement depuis les observations.")
+            else:
+                # 3) Rien trouvé → message et redirection douce vers la liste
+                messages.warning(request, "Aucune fiche patient ni donnée liée trouvée pour ce DN.")
+                return redirect('patients_list')
     observations = Observation.objects.filter(dn=dn).order_by('-date_observation', '-created_at')
 
     # Dernière facturation utile pour info (facultatif)

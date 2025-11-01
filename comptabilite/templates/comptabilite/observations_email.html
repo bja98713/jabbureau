@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Envoyer PDF Observations{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Envoyer le PDF des observations</h2>
+  <p>
+    Patient: <strong>{{ patient.nom }} {{ patient.prenom }}</strong> — DN {{ patient.dn }}
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Destinataires (séparés par virgule)</label>
+  <input type="text" name="to" class="form-control" placeholder="ex: secretariat@bronstein.fr, docteur@bronstein.fr" value="{{ default_to }}">
+    </div>
+    <div class="form-group">
+      <label>Cc (séparés par virgule)</label>
+      <input type="text" name="cc" class="form-control" placeholder="ex: copie@exemple.com" value="{{ default_cc }}">
+    </div>
+    <div class="form-group">
+      <label>Objet</label>
+      <input type="text" name="subject" class="form-control" value="{{ default_subject }}">
+    </div>
+    <div class="form-group">
+      <label>Message</label>
+      <textarea name="body" rows="6" class="form-control">{{ default_body }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Envoyer</button>
+    <a href="{% url 'patients_detail' patient.dn %}" class="btn btn-link">Annuler</a>
+  </form>
+</div>
+{% endblock %}
