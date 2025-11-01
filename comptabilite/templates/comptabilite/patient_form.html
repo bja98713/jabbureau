@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Modifier l'identité du patient</h2>
+
+  <div class="mb-3">
+    <label class="form-label">DN</label>
+    <input type="text" class="form-control" value="{{ patient.dn }}" readonly>
+    <div class="form-text">Le DN est l'identifiant unique et ne peut pas être modifié.</div>
+  </div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        <label for="id_nom" class="form-label">Nom</label>
+        {{ form.nom }}
+        {% if form.nom.errors %}<div class="text-danger small">{{ form.nom.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-4 mb-3">
+        <label for="id_prenom" class="form-label">Prénom</label>
+        {{ form.prenom }}
+        {% if form.prenom.errors %}<div class="text-danger small">{{ form.prenom.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-4 mb-3">
+        <label for="id_date_naissance" class="form-label">Date de naissance</label>
+        {{ form.date_naissance }}
+        {% if form.date_naissance.errors %}<div class="text-danger small">{{ form.date_naissance.errors }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <a href="{% url 'patients_detail' patient.dn %}" class="btn btn-link">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

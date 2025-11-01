@@ -28,6 +28,8 @@
       <nav class="flex-grow-1">
         <ul class="nav">
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_list' %}">Accueil</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'patients_list' %}">Patients</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'observations_patient_list' %}">Observations</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_create' %}">Nouvelle Facture</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_search_list' %}">Nouvelle Recherche</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'create_bordereau' %}">Nouveau Bordereau</a></li>
@@ -35,6 +37,7 @@
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'cheque_listing' %}">Chèques</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'comptabilite_summary' %}">Comptabilité</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'prevision_list' %}">Prévisions d'hospitalisation</a></li>
+        
           {% if request.user.username == "bronstein" %}
   <li><a class="nav-link text-white" href="#" onclick="window.open('{% url 'chat_view' 3 %}', '_blank', 'width=600,height=500')">💬 Chat avec Tania</a></li>
 {% elif request.user.username == "Tania" %}

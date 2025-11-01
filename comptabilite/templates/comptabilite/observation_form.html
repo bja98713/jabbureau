@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}{% if mode == 'update' %}Modifier{% else %}Nouvelle{% endif %} observation{% endblock %}
+{% block content %}
+<h2 class="mb-3">{% if mode == 'update' %}Modifier{% else %}Nouvelle{% endif %} observation</h2>
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row">
+    <div class="col-md-3">
+      {{ form.dn.label_tag }} {{ form.dn }}
+      <small id="dn-help-text" class="form-text text-muted">Saisissez le DN et sortez du champ pour pré-remplir.</small>
+    </div>
+    <div class="col-md-3">{{ form.nom.label_tag }} {{ form.nom }}</div>
+    <div class="col-md-3">{{ form.prenom.label_tag }} {{ form.prenom }}</div>
+    <div class="col-md-3">{{ form.date_naissance.label_tag }} {{ form.date_naissance }}</div>
+  </div>
+  <div class="form-group mt-3">
+    {{ form.motif_consultation.label_tag }}
+    {{ form.motif_consultation }}
+  </div>
+  <div class="form-group">
+    {{ form.texte_observation.label_tag }}
+    {{ form.texte_observation }}
+  </div>
+  <div class="form-group">
+    {{ form.conclusion_observation.label_tag }}
+    {{ form.conclusion_observation }}
+  </div>
+  <button type="submit" class="btn btn-primary">Enregistrer</button>
+  <a href="{% url 'observations_patient_list' %}" class="btn btn-link">Annuler</a>
+</form>
+
+<script>
+  (function(){
+    const dnInput = document.getElementById('id_dn');
+    if (!dnInput) return;
+    const nomInput = document.getElementById('id_nom');
+    const prenomInput = document.getElementById('id_prenom');
+    const dnaiInput = document.getElementById('id_date_naissance');
+
+    function prefillFromDN(){
+      const dn = (dnInput.value || '').trim();
+      if (!dn) return;
+      const url = '{% url "check_dn" %}?dn=' + encodeURIComponent(dn);
+      fetch(url).then(r => r.json()).then(data => {
+        if (data && data.exists && data.patient){
+          if (nomInput) { nomInput.value = data.patient.nom || ''; nomInput.readOnly = true; }
+          if (prenomInput) { prenomInput.value = data.patient.prenom || ''; prenomInput.readOnly = true; }
+          if (dnaiInput) { dnaiInput.value = data.patient.date_naissance || ''; dnaiInput.readOnly = true; }
+          const note = document.getElementById('dn-help-text');
+          if (note) note.textContent = "Infos patient verrouillées depuis le DN (lecture seule)";
+        }
+      }).catch(() => {});
+    }
+
+    function unlockPatientFields(){
+      const dn = (dnInput.value || '').trim();
+      if (!dn){
+        if (nomInput) nomInput.readOnly = false;
+        if (prenomInput) prenomInput.readOnly = false;
+        if (dnaiInput) dnaiInput.readOnly = false;
+        const note = document.getElementById('dn-help-text');
+        if (note) note.textContent = "Saisissez le DN et sortez du champ pour pré-remplir.";
+      }
+    }
+
+    dnInput.addEventListener('change', prefillFromDN);
+    dnInput.addEventListener('blur', prefillFromDN);
+    dnInput.addEventListener('input', unlockPatientFields);
+  })();
+</script>
+{% endblock %}

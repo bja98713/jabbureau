@@ -315,8 +315,59 @@ class Paiement(models.Model):
                 self.montant = self.facture.total_paye
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"Paiement de facture {self.facture.numero_facture} - {self.montant} xpf"
+    # (supprimé doublon __str__)
+
+# === Nouvelle table Observation (au niveau module, pas à l'intérieur de Paiement) ===
+class Observation(models.Model):
+    """Observation médicale liée à un patient identifié par DN.
+
+    Champs principaux:
+    - dn: identifiant patient
+    - nom, prenom, date_naissance: infos patient (recopiées pour facilité d'affichage)
+    - date_observation: date du jour par défaut
+    - motif_consultation, texte_observation, conclusion_observation: contenus saisis
+    """
+    dn = models.CharField(max_length=7, db_index=True, verbose_name="DN")
+    nom = models.CharField(max_length=100, verbose_name="Nom")
+    prenom = models.CharField(max_length=100, verbose_name="Prénom")
+    date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
+
+    date_observation = models.DateField(auto_now_add=True, verbose_name="Date de l'observation")
+
+    motif_consultation = models.CharField(max_length=255, verbose_name="Motif de consultation")
+    texte_observation = models.TextField(verbose_name="Observation")
+    conclusion_observation = models.TextField(blank=True, verbose_name="Conclusion")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date_observation", "-created_at"]
+        indexes = [
+            models.Index(fields=["dn", "date_observation"]),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.dn} - {self.date_observation} - {self.motif_consultation[:30]}"
+
+
+# === Table Patient (référentiel central par DN) ===
+class Patient(models.Model):
+    dn = models.CharField(max_length=7, unique=True, db_index=True, verbose_name="DN")
+    nom = models.CharField(max_length=100, verbose_name="Nom")
+    prenom = models.CharField(max_length=100, verbose_name="Prénom")
+    date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nom", "prenom"]
+        verbose_name = "Patient"
+        verbose_name_plural = "Patients"
+
+    def __str__(self):  # pragma: no cover
+        return f"{self.nom} {self.prenom} ({self.dn})"
 
 from django.db import models
 

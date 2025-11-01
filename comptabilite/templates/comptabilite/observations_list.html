@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Observations – {{ patient.nom }} {{ patient.prenom }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Observations – {{ patient.nom }} {{ patient.prenom }} (DN {{ patient.dn }})</h2>
+  <div>
+    <a class="btn btn-outline-secondary mr-2" href="{% url 'observations_pdf' patient.dn %}" target="_blank">PDF</a>
+    <a class="btn btn-primary" href="{% url 'observation_create_for_dn' patient.dn %}">Nouvelle observation</a>
+  </div>
+</div>
+
+<p class="text-muted">Date de naissance : {% if patient.date_naissance %}{{ patient.date_naissance|date:'d/m/Y' }}{% else %}-{% endif %}</p>
+
+{% if observations %}
+  <div class="list-group">
+    {% for obs in observations %}
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-1">{{ obs.date_observation|date:'d/m/Y' }} – {{ obs.motif_consultation }}</h5>
+          <div>
+            <a class="btn btn-sm btn-outline-primary mr-1" href="{% url 'observation_update' obs.pk %}">Modifier</a>
+            <a class="btn btn-sm btn-outline-danger" href="{% url 'observation_delete' obs.pk %}">Supprimer</a>
+          </div>
+        </div>
+        <p class="mb-1" style="white-space: pre-wrap;">{{ obs.texte_observation }}</p>
+        {% if obs.conclusion_observation %}
+          <p class="mt-2"><strong>Conclusion:</strong><br><span style="white-space: pre-wrap;">{{ obs.conclusion_observation }}</span></p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Aucune observation pour ce patient. Vous pouvez en créer une.</div>
+{% endif %}
+
+<a class="btn btn-link mt-3" href="{% url 'observations_patient_list' %}">← Retour à la liste des patients</a>
+{% endblock %}

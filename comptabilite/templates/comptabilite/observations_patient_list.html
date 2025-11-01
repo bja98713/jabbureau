@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Observations – Patients{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Observations – Patients</h2>
+  <a href="{% url 'observation_create' %}" class="btn btn-primary">Nouvelle observation</a>
+  </div>
+
+<form method="get" class="mb-3">
+  <div class="form-row align-items-end">
+    <div class="col-md-6">
+      <label for="q">Rechercher un patient</label>
+      <input type="text" id="q" name="q" value="{{ q|default:'' }}" class="form-control" placeholder="DN, nom, prénom ou date (JJ/MM/AAAA ou AAAA-MM-JJ)">
+    </div>
+    <div class="col-md-3">
+      <button type="submit" class="btn btn-outline-primary">Rechercher</button>
+      <a href="{% url 'observations_patient_list' %}" class="btn btn-link">Réinitialiser</a>
+    </div>
+  </div>
+</form>
+
+<div class="alert alert-secondary py-2">
+  Astuces&nbsp;:
+  <ul class="mb-0">
+    <li>Tapez un DN (7 chiffres), un nom, un prénom, ou une date de naissance (JJ/MM/AAAA ou AAAA-MM-JJ).</li>
+    <li>Cette liste affiche uniquement les patients ayant au moins une observation.</li>
+  </ul>
+</div>
+
+<table class="table table-striped table-sm">
+  <thead class="thead-light">
+    <tr>
+      <th>DN</th>
+      <th>Nom</th>
+      <th>Prénom</th>
+      <th>Date de naissance</th>
+      <th>Observations</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in patients %}
+      <tr>
+        <td>{{ p.dn }}</td>
+        <td>{{ p.nom }}</td>
+        <td>{{ p.prenom }}</td>
+        <td>{% if p.date_naissance %}{{ p.date_naissance|date:'d/m/Y' }}{% endif %}</td>
+        <td>
+          {% if p.obs_count %}
+            {{ p.obs_count }} existante(s)
+          {% else %}
+            Aucune
+          {% endif %}
+        </td>
+        <td class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-primary mr-1" href="{% url 'observations_by_dn' p.dn %}">Voir</a>
+          <a class="btn btn-sm btn-outline-success mr-1" href="{% url 'observation_create_for_dn' p.dn %}">Créer</a>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'observations_pdf' p.dn %}" target="_blank">PDF</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="text-center">Aucun patient trouvé.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

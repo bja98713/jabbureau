@@ -28,6 +28,7 @@ from django.utils.formats import date_format
 from django.utils.timezone import localtime, now
 from django.utils.translation import activate
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+from django.core.mail import EmailMessage
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -43,9 +44,9 @@ from datetime import datetime as dt, timedelta, date
 # ========== Local app imports ==========
 from .models import (
     Facturation, Code, Paiement,
-    PrevisionHospitalisation, Message,
+    PrevisionHospitalisation, Message, Observation, Patient,
 )
-from .forms import FacturationForm, PrevisionHospitalisationForm
+from .forms import FacturationForm, PrevisionHospitalisationForm, ObservationForm, PatientForm
 
 
 # ========== Utilities ==========
@@ -163,6 +164,15 @@ class FacturationCreateView(LoginRequiredMixin, CreateView):
     form_class = FacturationForm
     template_name = 'comptabilite/facturation_form.html'
     success_url = reverse_lazy('facturation_list')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        # Pré-remplir depuis les paramètres GET (depuis la fiche patient)
+        for key in ('dn', 'nom', 'prenom', 'date_naissance'):
+            val = self.request.GET.get(key)
+            if val:
+                initial[key] = val
+        return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1098,6 +1108,242 @@ def imprimer_fiche_facturation(request, pk):
 
     c.save()
     return response
+
+
+# ========== Observations médicales (liste patients, CRUD, PDF) ==========
+
+@login_required
+def observations_patient_list(request):
+    """Liste des patients ayant au moins une observation, avec recherche.
+
+    Recherche sur: DN, nom, prénom, date de naissance (AAAA-MM-JJ ou JJ/MM/AAAA).
+    """
+    q = (request.GET.get('q') or '').strip()
+
+    # Base: uniquement DNs présents dans Observation
+    obs_base = Observation.objects.all()
+
+    # Filtres de recherche
+    if q:
+        # Tente une date
+        d = parse_flex_date(q)
+        q_filter = (
+            Q(dn__icontains=q) |
+            Q(nom__icontains=q) |
+            Q(prenom__icontains=q)
+        )
+        if d:
+            q_filter |= Q(date_naissance=d)
+        obs_base = obs_base.filter(q_filter)
+
+    # DNs distincts (filtrés)
+    dn_list = list(obs_base.values_list('dn', flat=True).distinct())
+
+    # Compter observations par DN (total, pas seulement filtré)
+    obs_counts_map = {
+        r['dn']: r['count']
+        for r in Observation.objects.values('dn').annotate(count=Count('id'))
+    }
+
+    # Construire les lignes patient: on privilégie la dernière Facturation si dispo, sinon une Observation
+    patients = []
+    for dn in dn_list:
+        fact = (
+            Facturation.objects
+            .filter(dn=dn)
+            .order_by('-date_acte', '-id')
+            .values('dn', 'nom', 'prenom', 'date_naissance')
+            .first()
+        )
+        if fact:
+            row = dict(fact)
+        else:
+            o = (
+                Observation.objects
+                .filter(dn=dn)
+                .order_by('-date_observation', '-created_at')
+                .values('dn', 'nom', 'prenom', 'date_naissance')
+                .first()
+            )
+            row = dict(o) if o else {'dn': dn, 'nom': '', 'prenom': '', 'date_naissance': None}
+
+        row['obs_count'] = obs_counts_map.get(dn, 0)
+        patients.append(row)
+
+    # Tri par nom/prénom
+    patients.sort(key=lambda p: (p.get('nom') or '', p.get('prenom') or ''))
+
+    return render(request, 'comptabilite/observations_patient_list.html', {
+        'patients': patients,
+        'q': q,
+    })
+
+
+@login_required
+def observations_by_dn(request, dn: str):
+    """Liste des observations pour un DN, ordre chronologique."""
+    observations = Observation.objects.filter(dn=dn).order_by('date_observation', 'created_at')
+
+    # infos patient depuis Facturation si possible, sinon via une observation
+    fact = (Facturation.objects.filter(dn=dn).order_by('-date_acte').first())
+    if fact:
+        patient = {
+            'dn': fact.dn,
+            'nom': fact.nom,
+            'prenom': fact.prenom,
+            'date_naissance': fact.date_naissance,
+        }
+    else:
+        any_obs = observations.first()
+        patient = {
+            'dn': dn,
+            'nom': any_obs.nom if any_obs else '',
+            'prenom': any_obs.prenom if any_obs else '',
+            'date_naissance': any_obs.date_naissance if any_obs else None,
+        }
+
+    return render(request, 'comptabilite/observations_list.html', {
+        'patient': patient,
+        'observations': observations,
+    })
+
+
+@login_required
+def observation_create(request, dn: str | None = None):
+    """Créer une observation. Pré-remplit depuis la dernière facturation si DN fourni."""
+    initial = {}
+    if dn:
+        fact = Facturation.objects.filter(dn=dn).order_by('-date_acte').first()
+        if fact:
+            initial.update({
+                'dn': fact.dn,
+                'nom': fact.nom,
+                'prenom': fact.prenom,
+                'date_naissance': fact.date_naissance,
+            })
+        else:
+            initial['dn'] = dn
+
+    form = ObservationForm(request.POST or None, initial=initial)
+    if form.is_valid():
+        obs = form.save()
+        return redirect('observations_by_dn', dn=obs.dn)
+
+    return render(request, 'comptabilite/observation_form.html', {'form': form, 'mode': 'create'})
+
+
+@login_required
+def observation_update(request, pk: int):
+    obs = get_object_or_404(Observation, pk=pk)
+    form = ObservationForm(request.POST or None, instance=obs)
+    if form.is_valid():
+        obs = form.save()
+        return redirect('observations_by_dn', dn=obs.dn)
+    return render(request, 'comptabilite/observation_form.html', {'form': form, 'mode': 'update', 'obs': obs})
+
+
+@login_required
+def observation_delete(request, pk: int):
+    obs = get_object_or_404(Observation, pk=pk)
+    if request.method == 'POST':
+        dn = obs.dn
+        obs.delete()
+        return redirect('observations_by_dn', dn=dn)
+    return render(request, 'comptabilite/observation_confirm_delete.html', {'obs': obs})
+
+
+@login_required
+def observations_pdf(request, dn: str):
+    """Génère une synthèse PDF des observations pour un patient (DN)."""
+    observations = Observation.objects.filter(dn=dn).order_by('date_observation', 'created_at')
+    fact = Facturation.objects.filter(dn=dn).order_by('-date_acte').first()
+    patient = None
+    if fact:
+        patient = fact
+    else:
+        any_obs = observations.first()
+        if any_obs:
+            class P:
+                pass
+            patient = P()
+            patient.dn = any_obs.dn
+            patient.nom = any_obs.nom
+            patient.prenom = any_obs.prenom
+            patient.date_naissance = any_obs.date_naissance
+
+    html_string = render_to_string('comptabilite/observations_pdf.html', {
+        'patient': patient,
+        'observations': observations,
+        'user': request.user,
+    })
+    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(filename=css_path)]
+    )
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="observations_{dn}.pdf"'
+    return response
+
+
+# ========== Patients (référentiel central) ==========
+
+@login_required
+def patients_list(request):
+    """Liste des patients avec recherche (DN, nom, prénom, date naissance)."""
+    q = (request.GET.get('q') or '').strip()
+    qs = Patient.objects.all()
+    if q:
+        d = parse_flex_date(q)
+        filt = (
+            Q(dn__icontains=q) |
+            Q(nom__icontains=q) |
+            Q(prenom__icontains=q)
+        )
+        if d:
+            filt |= Q(date_naissance=d)
+        qs = qs.filter(filt)
+    qs = qs.order_by('nom', 'prenom')
+    return render(request, 'comptabilite/patient_list.html', {
+        'patients': qs,
+        'q': q,
+    })
+
+
+@login_required
+def patients_detail(request, dn: str):
+    """Fiche patient: infos d'identité et liste des observations, avec actions rapides."""
+    patient = get_object_or_404(Patient, dn=dn)
+    observations = Observation.objects.filter(dn=dn).order_by('-date_observation', '-created_at')
+
+    # Dernière facturation utile pour info (facultatif)
+    last_fact = (Facturation.objects
+                 .filter(dn=dn)
+                 .order_by('-date_acte', '-id')
+                 .first())
+    # Historique de facturation
+    facturations = (Facturation.objects
+                    .filter(dn=dn)
+                    .select_related('code_acte')
+                    .order_by('-date_acte', '-id'))
+
+    ctx = {
+        'patient': patient,
+        'observations': observations,
+        'last_fact': last_fact,
+        'facturations': facturations,
+    }
+    return render(request, 'comptabilite/patient_detail.html', ctx)
+
+
+@login_required
+def patient_update(request, dn: str):
+    patient = get_object_or_404(Patient, dn=dn)
+    form = PatientForm(request.POST or None, instance=patient)
+    if form.is_valid():
+        form.save()
+        return redirect('patients_detail', dn=patient.dn)
+    return render(request, 'comptabilite/patient_form.html', {'form': form, 'patient': patient})
 
 
 @login_required

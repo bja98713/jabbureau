@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Code, Medecin, Message
+from .models import Code, Medecin, Message, Patient
 from .models import ParametrageFacturation
 
 @admin.register(Code)
@@ -32,3 +32,11 @@ class ParametrageFacturationAdmin(admin.ModelAdmin):
     list_display = ('prochain_numero',)
     
 admin.site.register(Message)
+
+
+@admin.register(Patient)
+class PatientAdmin(admin.ModelAdmin):
+    list_display = ("dn", "nom", "prenom", "date_naissance", "created_at")
+    search_fields = ("dn", "nom", "prenom")
+    list_filter = ("date_naissance",)
+    ordering = ("nom", "prenom")

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Supprimer l'observation{% endblock %}
+{% block content %}
+<h2>Supprimer l'observation</h2>
+<p>Confirmez-vous la suppression de l'observation du {{ obs.date_observation|date:'d/m/Y' }} pour <strong>{{ obs.nom }} {{ obs.prenom }}</strong> (DN {{ obs.dn }}) ?</p>
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger">Supprimer</button>
+  <a href="{% url 'observations_by_dn' obs.dn %}" class="btn btn-secondary">Annuler</a>
+</form>
+{% endblock %}

@@ -1,6 +1,6 @@
 from django import forms
 from django.utils import timezone
-from .models import Facturation, Paiement, ParametrageFacturation
+from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient
 from .widgets import IntegerNumberInput, CodeSelectWidget
 
 ### forms.py (extrait corrigé avec incrémentation fiable)
@@ -156,3 +156,47 @@ class PrevisionHospitalisationForm(forms.ModelForm):
             'remarque': forms.Textarea(attrs={'rows': 3, 'cols': 60}),
         }
  
+
+# ===== Observations =====
+class ObservationForm(forms.ModelForm):
+    class Meta:
+        model = Observation
+        # date_observation est auto_now_add, on ne l'expose pas dans le formulaire
+        fields = [
+            'dn', 'nom', 'prenom', 'date_naissance',
+            'motif_consultation', 'texte_observation', 'conclusion_observation'
+        ]
+        widgets = {
+            'dn': forms.TextInput(attrs={'class': 'form-control'}),
+            'nom': forms.TextInput(attrs={'class': 'form-control'}),
+            'prenom': forms.TextInput(attrs={'class': 'form-control'}),
+            'date_naissance': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
+            'motif_consultation': forms.TextInput(attrs={'class': 'form-control'}),
+            'texte_observation': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
+            'conclusion_observation': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        dn = (cleaned.get('dn') or '').strip()
+        if dn:
+            # Si le DN existe dans Facturation, on force les infos patient à celles de la dernière facture (verrou solide)
+            fact = Facturation.objects.filter(dn=dn).order_by('-date_acte', '-id').first()
+            if fact:
+                cleaned['nom'] = fact.nom
+                cleaned['prenom'] = fact.prenom
+                cleaned['date_naissance'] = fact.date_naissance
+            # Sinon, DN inconnu : on laisse la saisie utilisateur telle quelle
+        return cleaned
+
+
+# ===== Patients =====
+class PatientForm(forms.ModelForm):
+    class Meta:
+        model = Patient
+        fields = ['nom', 'prenom', 'date_naissance']  # DN non éditable ici
+        widgets = {
+            'nom': forms.TextInput(attrs={'class': 'form-control'}),
+            'prenom': forms.TextInput(attrs={'class': 'form-control'}),
+            'date_naissance': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
+        }
