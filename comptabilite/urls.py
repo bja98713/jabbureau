@@ -71,8 +71,9 @@ urlpatterns = [
     path('observations/<str:dn>/new/', views.observation_create, name='observation_create_for_dn'),
     path('observations/<int:pk>/edit/', views.observation_update, name='observation_update'),
     path('observations/<int:pk>/delete/', views.observation_delete, name='observation_delete'),
-    path('observations/<int:pk>/pdf/', views.observation_pdf, name='observation_pdf'),
-    path('observations/<int:pk>/email/', views.observation_send_email, name='observation_send_email'),
+    # Utiliser un préfixe explicite pour éviter les collisions avec DN numériques
+    path('observations/id/<int:pk>/pdf/', views.observation_pdf, name='observation_pdf'),
+    path('observations/id/<int:pk>/email/', views.observation_send_email, name='observation_send_email'),
     path('observations/<str:dn>/pdf/', views.observations_pdf, name='observations_pdf'),
     path('observations/<str:dn>/email/', views.observations_send_email, name='observations_send_email'),
 ]
