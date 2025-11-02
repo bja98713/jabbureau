@@ -1,15 +1,21 @@
 import os
 from pathlib import Path
 import pdfkit
+from dotenv import load_dotenv
 
 # Chemin de base du projet
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'changez-moi-avec-une-clé-secrète-unique'
+# Charger les variables d'environnement depuis un fichier .env si présent
+load_dotenv(BASE_DIR / '.env')
 
-DEBUG = True  # En production, mettez False
+SECRET_KEY = os.getenv('SECRET_KEY', 'please-set-a-strong-secret-key')
 
-ALLOWED_HOSTS = ['www.docteur-bronstein.com', '127.0.0.1']  # En production, mettez votre nom de domaine ou IP
+# DEBUG: str -> bool ("True"/"False")
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('1','true','yes','on')
+
+# ALLOWED_HOSTS depuis env (liste séparée par des virgules)
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'www.docteur-bronstein.com,127.0.0.1').split(',') if h.strip()]
 
 
 # Application 'comptabilite' + apps par défaut
@@ -91,15 +97,15 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/facturation/patients/'  # redirige vers la liste des patients après connexion
 LOGOUT_REDIRECT_URL = 'login'
 
-EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST          = 'smtp.gmail.com'
-EMAIL_PORT          = 587
-EMAIL_USE_TLS       = True
+EMAIL_BACKEND       = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST          = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT          = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS       = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('1','true','yes','on')
 
-EMAIL_HOST_USER     = 'ja.bronstein@gmail.com'
-EMAIL_HOST_PASSWORD = 'afwg flrc buze usok'
+EMAIL_HOST_USER     = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 
-DEFAULT_FROM_EMAIL  = 'Pr. Jean-Ariel Bronstein <ja.bronstein@gmail.com>'
+DEFAULT_FROM_EMAIL  = os.getenv('DEFAULT_FROM_EMAIL', 'Pr. Jean-Ariel Bronstein <no-reply@example.com>')
 
 # Réglages de sécurité appliqués seulement en production
 if not DEBUG:
