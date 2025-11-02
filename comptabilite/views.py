@@ -45,9 +45,9 @@ from datetime import datetime as dt, timedelta, date
 # ========== Local app imports ==========
 from .models import (
     Facturation, Code, Paiement,
-    PrevisionHospitalisation, Message, Observation, Patient,
+    PrevisionHospitalisation, Message, Observation, Patient, Courrier,
 )
-from .forms import FacturationForm, PrevisionHospitalisationForm, ObservationForm, PatientForm
+from .forms import FacturationForm, PrevisionHospitalisationForm, ObservationForm, PatientForm, CourrierForm
 
 
 # ========== Utilities ==========
@@ -1368,8 +1368,10 @@ def observations_send_email(request, dn: str):
             messages.error(request, "Veuillez renseigner au moins un destinataire.")
             default_subject = f"Observations – {patient.nom} {patient.prenom} (DN {dn})"
             default_body = "Bonjour,\n\nVeuillez trouver ci-joint le PDF des observations.\n\nBien cordialement,\nDr. Bronstein"
-            # Par défaut, on met le secrétariat en Cc et non en To
-            default_to = ", ".join(filter(None, [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']))
+            # Par défaut, on met le secrétariat en Cc et non en To, en évitant les doublons
+            _cands = [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']
+            _cands = [x for x in _cands if x]
+            default_to = ", ".join(list(dict.fromkeys([x.lower() for x in _cands])))
             return render(request, 'comptabilite/observations_email.html', {
                 'patient': patient,
                 'dn': dn,
@@ -1410,8 +1412,10 @@ def observations_send_email(request, dn: str):
     # GET: formulaire par défaut
     default_subject = f"Observations – {patient.nom} {patient.prenom} (DN {dn})"
     default_body = "Bonjour,\n\nVeuillez trouver ci-joint le PDF des observations.\n\nBien cordialement,\nDr. Bronstein"
-    # Par défaut: To = le médecin + l'utilisateur si possible; Cc = secrétariat
-    default_to = ", ".join(filter(None, [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']))
+    # Par défaut: To = le médecin + l'utilisateur si possible; Cc = secrétariat (sans doublons)
+    _cands = [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']
+    _cands = [x for x in _cands if x]
+    default_to = ", ".join(list(dict.fromkeys([x.lower() for x in _cands])))
     return render(request, 'comptabilite/observations_email.html', {
         'patient': patient,
         'dn': dn,
@@ -1453,7 +1457,9 @@ def observation_send_email(request, pk: int):
             messages.error(request, "Veuillez renseigner au moins un destinataire.")
             default_subject = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} – {patient.nom} {patient.prenom} (DN {patient.dn})"
             default_body = "Bonjour,\n\nVeuillez trouver ci-joint l'observation.\n\nBien cordialement,\nDr. Bronstein"
-            default_to = ", ".join(filter(None, [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']))
+            _cands = [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']
+            _cands = [x for x in _cands if x]
+            default_to = ", ".join(list(dict.fromkeys([x.lower() for x in _cands])))
             return render(request, 'comptabilite/observations_email.html', {
                 'patient': patient,
                 'dn': patient.dn,
@@ -1492,7 +1498,9 @@ def observation_send_email(request, pk: int):
     # GET: formulaire par défaut
     default_subject = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} – {patient.nom} {patient.prenom} (DN {patient.dn})"
     default_body = "Bonjour,\n\nVeuillez trouver ci-joint l'observation.\n\nBien cordialement,\nDr. Bronstein"
-    default_to = ", ".join(filter(None, [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']))
+    _cands = [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']
+    _cands = [x for x in _cands if x]
+    default_to = ", ".join(list(dict.fromkeys([x.lower() for x in _cands])))
     return render(request, 'comptabilite/observations_email.html', {
         'patient': patient,
         'dn': patient.dn,
@@ -1500,6 +1508,309 @@ def observation_send_email(request, pk: int):
         'default_body': default_body,
         'default_to': default_to,
         'default_cc': 'secretariat@bronstein.fr',
+    })
+
+
+# ========== Courriers médicaux (liste par DN, CRUD, PDF, Email) ==========
+
+@login_required
+def courriers_by_dn(request, dn: str):
+    courriers = Courrier.objects.filter(dn=dn).order_by('-date_courrier', '-created_at')
+    fact = Facturation.objects.filter(dn=dn).order_by('-date_acte').first()
+    if fact:
+        patient = {'dn': fact.dn, 'nom': fact.nom, 'prenom': fact.prenom, 'date_naissance': fact.date_naissance}
+    else:
+        any_obs = Observation.objects.filter(dn=dn).order_by('-date_observation', '-created_at').first()
+        patient = {'dn': dn, 'nom': getattr(any_obs, 'nom', ''), 'prenom': getattr(any_obs, 'prenom', ''), 'date_naissance': getattr(any_obs, 'date_naissance', None)}
+
+    return render(request, 'comptabilite/courriers_list.html', {
+        'patient': patient,
+        'courriers': courriers,
+    })
+
+
+@login_required
+def courrier_create(request, dn: str):
+    initial = {'dn': dn}
+    # Pré-remplir identité depuis dernière facture si dispo
+    fact = Facturation.objects.filter(dn=dn).order_by('-date_acte').first()
+    if fact:
+        initial.update({'nom': fact.nom, 'prenom': fact.prenom, 'date_naissance': fact.date_naissance})
+    else:
+        any_obs = Observation.objects.filter(dn=dn).order_by('-date_observation', '-created_at').first()
+        if any_obs:
+            initial.update({'nom': any_obs.nom, 'prenom': any_obs.prenom, 'date_naissance': any_obs.date_naissance})
+    # Type de courrier proposé via GET ?type=
+    tp = (request.GET.get('type') or '').upper()
+    if tp in dict(Courrier.TYPE_CHOICES):
+        initial['type_courrier'] = tp
+        # Pré-remplir un modèle de texte selon le type choisi
+    if tp == 'FOGD':
+            # Date du jour et identité déjà pré-remplies via initial
+            from django.utils import timezone as _tz
+            today = _tz.localdate().strftime('%d/%m/%Y')
+            nom = initial.get('nom', '')
+            prenom = initial.get('prenom', '')
+            dna = initial.get('date_naissance')
+            dna_str = dna.strftime('%d/%m/%Y') if dna else ''
+            initial['corps'] = (
+                "TECHNIQUE :\n"
+                "Lieu : Clinique PAOFAI, salle 4, Opérateur : Dr. J-A Bronstein\n"
+                "Appareil Fibroscopie N°2 - n° série : 210 31 12\n"
+                "Protocole de désinfection conforme à la circulaire DGH/DH n° 96-236 du 12 avril 1996. "
+                "L'opérateur s'est assuré de la validation finale du protocole de désinfection : Oui\n"
+                "Préparation : Xylocaïne Gel\n"
+                "Tolérance : Bonne\n\n"
+                "INDICATION : \n\n"
+                "RESULTATS :\n\n"
+                "Œsophage : \n"
+                "- Muqueuse œsophagienne normale sur toute sa longueur\n"
+                "- Ligne Z : 40 cm des arcades dentaires\n\n"
+                "Cardia : Cardia anatomique à 40 cm des arcades dentaires\n\n"
+                "Fundus : \n\n"
+                "Antre : Normal\n\n"
+                "Pylore : Normal\n\n"
+                "Bulbe : Normal\n\n"
+                "Duodénum : Normal\n\n"
+                "Biopsies : Oui / Non\n\n"
+                "CONCLUSION : Fibroscopie oeso-gastro-duodénale normale\n"
+            )
+    elif tp == 'COLO':
+            from django.utils import timezone as _tz
+            today = _tz.localdate().strftime('%d/%m/%Y')
+            nom = initial.get('nom', '')
+            prenom = initial.get('prenom', '')
+            dna = initial.get('date_naissance')
+            dna_str = dna.strftime('%d/%m/%Y') if dna else ''
+            initial['corps'] = (
+                "TECHNIQUE :\n"
+                "Lieu : Clinique PAOFAI, salle 4, Opérateur : Dr. J-A Bronstein\n"
+                "Appareil Fibroscopie N°2 - n° série : 210 31 12\n"
+                "Protocole de désinfection conforme à la circulaire DGH/DH n° 96-236 du 12 avril 1996. "
+                "L'opérateur s'est assuré de la validation finale du protocole de désinfection : Oui\n"
+                "Préparation : 3 litres de FORTRANS\n"
+                "Score de BOSTON : Colon droit :  3  // Colon transverse :  3  // Colon Gauche - Rectum : 3  // Total : 9 \n"
+                "Tolérance : Bonne\n\n"
+                "INDICATION : \n\n"
+                "RESULTATS :\n\n"
+                "Progression facile dans un colon bien préparé jusque dans le caecum\n\n"
+                "Toucher rectal : normal\n\n"
+                "Marge anale : normale\n\n"
+                "Canal anal : normal\n\n"
+                "Rectum : normal\n\n"
+                "Sigmoide : normal\n\n"
+                "Colon gauche : normal\n\n"
+                "Angle gauche : normal\n\n"
+                "Colon transverse : normal\n\n"
+                "Angle droit : normal\n\n"
+                "Colon droit : normal\n\n"
+                "Caecum : normal\n\n"
+                "Valvule de Bauhin : normal\n\n"
+                "Iléon terminal : normal\n\n"
+                "CONCLUSION : Coloscopie totale normale\n"
+            )
+    elif tp == 'ECHO':
+            from django.utils import timezone as _tz
+            today = _tz.localdate().strftime('%d/%m/%Y')
+            nom = (initial.get('nom') or '').strip()
+            prenom = (initial.get('prenom') or '').strip()
+            dna = initial.get('date_naissance')
+            dna_str = dna.strftime('%d/%m/%Y') if dna else ''
+            initial['corps'] = (
+                "TECHNIQUE :\n"
+                "Lieu : Clinique PAOFAI, Opérateur : Dr. J-A Bronstein\n"
+                "Appareil : Sonde convexe haute résolution\n"
+                "Tolérance : Bonne\n\n"
+                "INDICATION : \n\n"
+                "RÉSULTATS :\n\n"
+                "Foie : Taille et échostructure normales, sans lésion focale visible\n\n"
+                "Voies biliaires : Non dilatées\n\n"
+                "Vésicule biliaire : Parois fines, pas de lithiases\n\n"
+                "Pancréas : Visualisation correcte, échostructure conservée\n\n"
+                "Rate : Taille normale, homogène\n\n"
+                "Reins : Taille conservée, pas d'hydronéphrose, pas de lésion focale\n\n"
+                "Aorte et VCI : Calibre normal, pas d'anévrysme\n\n"
+                "Vessie : Paroi fine, contenu anéchogène\n\n"
+                "Prostate/Utérus-Annexes : Aspect dans les limites de la normale (selon contexte)\n\n"
+                "CONCLUSION : Échographie abdominale normale\n"
+            )
+    elif tp == 'SYN':
+            from django.utils import timezone as _tz
+            today = _tz.localdate().strftime('%d/%m/%Y')
+            nom = (initial.get('nom') or '').strip()
+            prenom = (initial.get('prenom') or '').strip()
+            dna = initial.get('date_naissance')
+            dna_str = dna.strftime('%d/%m/%Y') if dna else 'XX/XX/XXXX'
+            initial['corps'] = (
+                "Cher collègue,\n\n"
+                f"M. (Mme) {nom} {prenom}, né(e) le {dna_str}, a été hospitalisé(e) dans le service des hospitalisations ambulatoires le {today} pour dépistage endoscopique sous AG.\n\n"
+                "La gastroscopie est normale. Il n'y a pas d'anomalie des muqueuses duodénale, antrale, fundique et œsophagienne. Aucune biopsie n'a été réalisée.\n\n"
+                "La coloscopie est complète, menée jusque dans le caecum. Le colon est correctement préparé, et toute la muqueuse est examinée. Au retrait du coloscope, il n'a pas été mis en évidence d'anomalie de la muqueuse (caecum, colon droit, colon transverse, colon gauche, sigmoïde et rectum). Il n'y a pas lieu d'envisager un contrôle avant cinq ans, sauf si apparaissent entre‑temps des rectorragies, des douleurs abdominales, ou un trouble du transit.\n\n"
+                "— Variante si polypes —\n"
+                "La coloscopie est complète, menée jusque dans le caecum. Le colon est correctement préparé, et toute la muqueuse est examinée. Au retrait du coloscope, on enlève X polype(s) à la pince biopsique. Il n'y a pas lieu d'envisager un contrôle avant cinq ans, sauf si apparaissent entre‑temps des rectorragies, des douleurs abdominales, ou un trouble du transit.\n\n"
+                "Je te remercie de ta confiance et je reste à ta disposition.\n"
+            )
+    form = CourrierForm(request.POST or None, initial=initial)
+    if form.is_valid():
+        c = form.save()
+        return redirect('courriers_by_dn', dn=c.dn)
+    return render(request, 'comptabilite/courrier_form.html', {'form': form, 'mode': 'create', 'dn': dn})
+
+
+@login_required
+def courrier_update(request, pk: int):
+    c = get_object_or_404(Courrier, pk=pk)
+    form = CourrierForm(request.POST or None, instance=c)
+    if form.is_valid():
+        c = form.save()
+        return redirect('courriers_by_dn', dn=c.dn)
+    return render(request, 'comptabilite/courrier_form.html', {'form': form, 'mode': 'update', 'dn': c.dn, 'courrier': c})
+
+
+@login_required
+def courrier_delete(request, pk: int):
+    c = get_object_or_404(Courrier, pk=pk)
+    if request.method == 'POST':
+        dn = c.dn
+        c.delete()
+        return redirect('courriers_by_dn', dn=dn)
+    return render(request, 'comptabilite/courrier_confirm_delete.html', {'courrier': c})
+
+
+@login_required
+def courrier_pdf(request, pk: int):
+    c = get_object_or_404(Courrier, pk=pk)
+    # Construit un objet patient simple
+    class P: pass
+    patient = P()
+    patient.dn = c.dn
+    patient.nom = c.nom
+    patient.prenom = c.prenom
+    patient.date_naissance = c.date_naissance
+
+    template_name = 'comptabilite/courrier_pdf.html'
+    if c.type_courrier == 'FOGD':
+        template_name = 'comptabilite/courrier_fogd_pdf.html'
+    elif c.type_courrier == 'COLO':
+        template_name = 'comptabilite/courrier_colo_pdf.html'
+    elif c.type_courrier == 'ECHO':
+        template_name = 'comptabilite/courrier_echo_pdf.html'
+    elif c.type_courrier == 'SYN':
+        template_name = 'comptabilite/courrier_syn_pdf.html'
+
+    html_string = render_to_string(template_name, {
+        'patient': patient,
+        'courrier': c,
+        'user': request.user,
+    })
+    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(filename=css_path)]
+    )
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="courrier_{c.pk}.pdf"'
+    return response
+
+
+@login_required
+def courrier_send_email(request, pk: int):
+    c = get_object_or_404(Courrier, pk=pk)
+    class P: pass
+    patient = P()
+    patient.dn = c.dn
+    patient.nom = c.nom
+    patient.prenom = c.prenom
+    patient.date_naissance = c.date_naissance
+
+    type_label = c.type_label()
+    date_str = c.date_courrier.strftime('%d/%m/%Y') if c.date_courrier else ''
+    if request.method == 'POST':
+        to = (request.POST.get('to') or '').strip()
+        cc = (request.POST.get('cc') or '').strip()
+        subject = (request.POST.get('subject') or '').strip() or f"{type_label} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+        body = (request.POST.get('body') or '').strip() or "Bonjour,\n\nVeuillez trouver ci-joint le courrier.\n\nBien cordialement,\nDr. Bronstein"
+        to_list = [a.strip() for a in to.replace(';', ',').split(',') if a.strip()]
+        cc_list = [a.strip() for a in cc.replace(';', ',').split(',') if a.strip()]
+
+        if not to_list:
+            messages.error(request, "Veuillez renseigner au moins un destinataire.")
+            default_subject = f"{type_label} – {date_str} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+            default_body = "Bonjour,\n\nVeuillez trouver ci-joint le courrier.\n\nBien cordialement,\nDr. Bronstein"
+            # Destinataires par défaut selon type
+            if c.type_courrier in ('FOGD', 'COLO', 'ECHO'):
+                default_to = 'secretariat@bronstein.fr'
+                default_cc = cc or 'lwuilmet@polyclinique-paofai.pf'
+            elif c.type_courrier == 'SYN':
+                default_to = ''  # pas de destinataire principal
+                # deux adresses en copie
+                default_cc = cc or 'secretariat@bronstein.fr, lwuilmet@polyclinique-paofai.pf'
+            else:
+                default_to = ''
+                default_cc = cc or ''
+            return render(request, 'comptabilite/courrier_email.html', {
+                'patient': patient,
+                'courrier': c,
+                'default_subject': default_subject,
+                'default_body': default_body,
+                'default_to': default_to,
+                'default_cc': default_cc,
+            })
+
+        # Choix du template PDF identique à l'aperçu PDF
+        template_name = 'comptabilite/courrier_pdf.html'
+        if c.type_courrier == 'FOGD':
+            template_name = 'comptabilite/courrier_fogd_pdf.html'
+        elif c.type_courrier == 'COLO':
+            template_name = 'comptabilite/courrier_colo_pdf.html'
+        elif c.type_courrier == 'ECHO':
+            template_name = 'comptabilite/courrier_echo_pdf.html'
+        elif c.type_courrier == 'SYN':
+            template_name = 'comptabilite/courrier_syn_pdf.html'
+
+        html_string = render_to_string(template_name, {
+            'patient': patient,
+            'courrier': c,
+            'user': request.user,
+        })
+        css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+        pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+            stylesheets=[CSS(filename=css_path)]
+        )
+        email = EmailMessage(
+            subject=subject,
+            body=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=to_list or [request.user.email] if getattr(request.user, 'email', '') else None,
+        )
+        if cc_list:
+            email.cc = cc_list
+        email.attach(f"courrier_{c.pk}.pdf", pdf_bytes, 'application/pdf')
+        email.send()
+        msg = f"Courrier envoyé à: {', '.join(to_list)}"
+        if cc_list:
+            msg += f" (Cc: {', '.join(cc_list)})"
+        messages.success(request, msg)
+        return redirect('courriers_by_dn', dn=patient.dn)
+
+    default_subject = f"{type_label} – {date_str} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+    default_body = "Bonjour,\n\nVeuillez trouver ci-joint le courrier.\n\nBien cordialement,\nDr. Bronstein"
+    # Définir les destinataires par défaut selon le type
+    if c.type_courrier in ('FOGD', 'COLO', 'ECHO'):
+        default_to = 'secretariat@bronstein.fr'
+        default_cc = 'lwuilmet@polyclinique-paofai.pf'
+    elif c.type_courrier == 'SYN':
+        default_to = ''  # pas de destinataire principal
+        default_cc = 'secretariat@bronstein.fr, lwuilmet@polyclinique-paofai.pf'
+    else:
+        default_to = ''
+        default_cc = ''
+    return render(request, 'comptabilite/courrier_email.html', {
+        'patient': patient,
+        'courrier': c,
+        'default_subject': default_subject,
+        'default_body': default_body,
+        'default_to': default_to,
+        'default_cc': default_cc,
     })
 
 

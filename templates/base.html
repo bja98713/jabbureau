@@ -14,6 +14,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %} Dr. Jean-Ariel BRONSTEIN | Gastro-entérologue {% endblock %}</title>
+  <link rel="icon" href="{% static 'images/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
@@ -21,7 +22,7 @@
     body { background-color: #f1e9ec; }
   </style>
 </head>
-<body>
+<body data-user-id="{{ request.user.id|default:'' }}" data-msg-url="{% url 'get_messages' %}" data-chat-template="{% url 'chat_view' 0 %}">
   <header class="bg-primary text-white py-3">
     <div class="container text-center">
       <h1 class="mb-0 mr-4">Dr. Jean-Ariel BRONSTEIN | Gastro-entérologue</h1>
@@ -39,9 +40,9 @@
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'prevision_list' %}">Prévisions d'hospitalisation</a></li>
         
           {% if request.user.username == "bronstein" %}
-  <li><a class="nav-link text-white" href="#" onclick="window.open('{% url 'chat_view' 3 %}', '_blank', 'width=600,height=500')">💬 Chat avec Tania</a></li>
+  <li><a class="nav-link text-white chat-open" href="{% url 'chat_view' 3 %}">💬 Chat avec Tania</a></li>
 {% elif request.user.username == "Tania" %}
-  <li><a class="nav-link text-white" href="#" onclick="window.open('{% url 'chat_view' 1 %}', '_blank', 'width=600,height=500')">💬 Chat avec Taote</a></li>
+  <li><a class="nav-link text-white chat-open" href="{% url 'chat_view' 1 %}">💬 Chat avec Taote</a></li>
 {% endif %}
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'patients_hospitalises' %}">Hospitalisés</a></li>
           <li class="nav-item">
@@ -109,21 +110,40 @@
       window.location.href = liens[i];
     }
 
-    {% if request.user.is_authenticated %}
-    setInterval(function() {
-      $.get("/chat/get/?receiver_id={{ request.user.id }}", function(data) {
-        let unread = data.messages.filter(m => m.sender_id !== {{ request.user.id }} && !m.lu);
-        if (unread.length > 0 && !$('#chat-alert').length) {
-          const link = "/chat/" + unread[0].sender_id + "/";
-          $('body').prepend(
-            '<div id="chat-alert" style="position:fixed;top:0;left:0;width:100%;background:#fffae6;color:#333;padding:10px;z-index:9999;text-align:center;border-bottom:1px solid #ccc;">' +
-            '💬 <strong>Nouveau message reçu !</strong> <a href="' + link + '">Ouvrir le chat</a>' +
-            ' <span style="cursor:pointer;float:right;margin-right:10px;" onclick="$('#chat-alert').fadeOut();">✖</span></div>'
-          );
-        }
+    // Ouvrir les liens de chat dans une popup dédiée
+    document.querySelectorAll('a.chat-open').forEach(function(a){
+      a.addEventListener('click', function(e){
+        e.preventDefault();
+        window.open(this.href, '_blank', 'width=600,height=500');
       });
-    }, 10000);
-    {% endif %}
+    });
+
+    // Alerte de nouveau message (si connecté)
+    function closeChatAlert(){
+      var el = document.getElementById('chat-alert');
+      if (el) { el.style.display = 'none'; }
+    }
+    (function(){
+      var uid = document.body.dataset.userId;
+      var msgUrl = document.body.dataset.msgUrl;
+      var chatTpl = document.body.dataset.chatTemplate; // ex: /facturation/chat/0/
+      if (!uid || !msgUrl || !chatTpl) { return; }
+      uid = parseInt(uid, 10);
+      setInterval(function(){
+        $.get(msgUrl + '?receiver_id=' + uid, function(data){
+          var unread = (data.messages || []).filter(function(m){ return m.sender_id !== uid && !m.lu; });
+          if (unread.length > 0 && !document.getElementById('chat-alert')){
+            var link = chatTpl.replace(/0\/$/, '') + unread[0].sender_id + '/';
+            var div = document.createElement('div');
+            div.id = 'chat-alert';
+            div.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:#fffae6;color:#333;padding:10px;z-index:9999;text-align:center;border-bottom:1px solid #ccc;';
+            div.innerHTML = '💬 <strong>Nouveau message reçu !</strong> <a href="' + link + '">Ouvrir le chat</a>' +
+                            ' <span style="cursor:pointer;float:right;margin-right:10px;" onclick="closeChatAlert()">✖</span>';
+            document.body.prepend(div);
+          }
+        });
+      }, 10000);
+    })();
   </script>
 </body>
 </html>

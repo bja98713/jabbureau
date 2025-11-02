@@ -1,13 +1,13 @@
 from django import forms
 from django.utils import timezone
-from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient
+from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient, Courrier
 from .widgets import IntegerNumberInput, CodeSelectWidget
 
 ### forms.py (extrait corrigé avec incrémentation fiable)
 
 from django import forms
 from django.utils import timezone
-from .models import Facturation, Paiement, ParametrageFacturation
+from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient
 from .widgets import IntegerNumberInput, CodeSelectWidget
 
 class FacturationForm(forms.ModelForm):
@@ -156,6 +156,26 @@ class PrevisionHospitalisationForm(forms.ModelForm):
             'remarque': forms.Textarea(attrs={'rows': 3, 'cols': 60}),
         }
  
+class CourrierForm(forms.ModelForm):
+    class Meta:
+        model = Courrier
+        fields = [
+            'dn', 'nom', 'prenom', 'date_naissance',
+            'type_courrier', 'corps'
+        ]
+        widgets = {
+            'dn': forms.TextInput(attrs={'class': 'form-control'}),
+            'nom': forms.TextInput(attrs={'class': 'form-control'}),
+            'prenom': forms.TextInput(attrs={'class': 'form-control'}),
+            'date_naissance': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
+            'type_courrier': forms.Select(attrs={'class': 'form-control'}),
+            'corps': forms.Textarea(attrs={'class': 'form-control', 'rows': 8}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Accept both YYYY-MM-DD and DD/MM/YYYY for date_naissance
+        self.fields['date_naissance'].input_formats = ['%Y-%m-%d', '%d/%m/%Y']
 
 # ===== Observations =====
 class ObservationForm(forms.ModelForm):

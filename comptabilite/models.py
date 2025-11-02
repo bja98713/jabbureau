@@ -369,6 +369,40 @@ class Patient(models.Model):
     def __str__(self):  # pragma: no cover
         return f"{self.nom} {self.prenom} ({self.dn})"
 
+
+# === Courrier médical par patient ===
+class Courrier(models.Model):
+    TYPE_CHOICES = [
+        ('FOGD', 'Fibroscopie gastrique'),
+        ('COLO', 'Coloscopie'),
+        ('ECHO', 'Échographie abdominale'),
+        ('SYN',  'Courrier de synthèse'),
+    ]
+
+    dn = models.CharField(max_length=7, db_index=True, verbose_name="DN")
+    nom = models.CharField(max_length=100, verbose_name="Nom")
+    prenom = models.CharField(max_length=100, verbose_name="Prénom")
+    date_naissance = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
+
+    type_courrier = models.CharField(max_length=5, choices=TYPE_CHOICES, verbose_name="Type de courrier")
+    date_courrier = models.DateField(auto_now_add=True, verbose_name="Date du courrier")
+    corps = models.TextField(verbose_name="Texte du courrier")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date_courrier", "-created_at"]
+        indexes = [
+            models.Index(fields=["dn", "date_courrier"]),
+        ]
+
+    def type_label(self):
+        return dict(self.TYPE_CHOICES).get(self.type_courrier, self.type_courrier)
+
+    def __str__(self):  # pragma: no cover
+        return f"{self.type_label()} – {self.nom} {self.prenom} ({self.dn})"
+
 from django.db import models
 
 class Statistique(models.Model):

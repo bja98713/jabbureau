@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Envoyer le courrier{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Envoyer le courrier ({{ courrier.type_label }})</h2>
+  <p>
+    Patient: <strong>{{ patient.nom }} {{ patient.prenom }}</strong> — DN {{ patient.dn }}
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Destinataires (séparés par virgule)</label>
+      <input type="text" name="to" class="form-control" placeholder="ex: docteur@bronstein.fr" value="{{ default_to }}">
+    </div>
+    <div class="form-group">
+      <label>Cc (séparés par virgule)</label>
+      <input type="text" name="cc" class="form-control" placeholder="ex: secretariat@bronstein.fr" value="{{ default_cc }}">
+    </div>
+    <div class="form-group">
+      <label>Objet</label>
+      <input type="text" name="subject" class="form-control" value="{{ default_subject }}">
+    </div>
+    <div class="form-group">
+      <label>Message</label>
+      <textarea name="body" rows="6" class="form-control">{{ default_body }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Envoyer</button>
+    <a href="{% url 'courriers_by_dn' patient.dn %}" class="btn btn-link">Annuler</a>
+  </form>
+</div>
+{% endblock %}

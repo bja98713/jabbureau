@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}{% if mode == 'update' %}Modifier courrier{% else %}Nouveau courrier{% endif %}{% endblock %}
+{% block content %}
+<h2>{% if mode == 'update' %}Modifier courrier{% else %}Nouveau courrier{% endif %}</h2>
+<form method="post">
+  {% csrf_token %}
+  <div class="form-row">
+    <div class="form-group col-md-3">{{ form.dn.label_tag }} {{ form.dn }}</div>
+    <div class="form-group col-md-3">{{ form.nom.label_tag }} {{ form.nom }}</div>
+    <div class="form-group col-md-3">{{ form.prenom.label_tag }} {{ form.prenom }}</div>
+    <div class="form-group col-md-3">{{ form.date_naissance.label_tag }} {{ form.date_naissance }}</div>
+  </div>
+  <div class="form-row">
+    <div class="form-group col-md-4">{{ form.type_courrier.label_tag }} {{ form.type_courrier }}</div>
+  </div>
+  <div class="form-group">{{ form.corps.label_tag }} {{ form.corps }}</div>
+  <button type="submit" class="btn btn-primary">Enregistrer</button>
+  {% if dn %}
+    <a href="{% url 'courriers_by_dn' dn %}" class="btn btn-link">Annuler</a>
+  {% endif %}
+  {% if courrier %}
+    <a class="btn btn-outline-secondary ml-2" href="{% url 'courrier_pdf' courrier.pk %}" target="_blank">PDF</a>
+    <a class="btn btn-outline-info ml-2" href="{% url 'courrier_send_email' courrier.pk %}">Envoyer par e‑mail</a>
+  {% endif %}
+  </form>
+
+<script>
+  (function(){
+    function fmtDate(d) {
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yy = d.getFullYear();
+      return `${dd}/${mm}/${yy}`;
+    }
+
+    function getField(id){ return document.getElementById(id); }
+
+    function tplFOGD(){
+      return (
+        "TECHNIQUE :\n"+
+        "Lieu : Clinique PAOFAI, salle 4, Opérateur : Dr. J-A Bronstein\n"+
+        "Appareil Fibroscopie N°2 - n° série : 210 31 12\n"+
+        "Protocole de désinfection conforme à la circulaire DGH/DH n° 96-236 du 12 avril 1996. L'opérateur s'est assuré de la validation finale du protocole de désinfection : Oui\n"+
+        "Préparation : Xylocaïne Gel\n"+
+        "Tolérance : Bonne\n\n"+
+        "INDICATION : \n\n"+
+        "RESULTATS :\n\n"+
+        "Œsophage : \n"+
+        "- Muqueuse œsophagienne normale sur toute sa longueur\n"+
+        "- Ligne Z : 40 cm des arcades dentaires\n\n"+
+        "Cardia : Cardia anatomique à 40 cm des arcades dentaires\n\n"+
+        "Fundus : \n\n"+
+        "Antre : Normal\n\n"+
+        "Pylore : Normal\n\n"+
+        "Bulbe : Normal\n\n"+
+        "Duodénum : Normal\n\n"+
+        "Biopsies : Oui / Non\n\n"+
+        "CONCLUSION : Fibroscopie oeso-gastro-duodénale normale\n"
+      );
+    }
+
+    function tplCOLO(){
+      return (
+        "TECHNIQUE :\n"+
+        "Lieu : Clinique PAOFAI, salle 4, Opérateur : Dr. J-A Bronstein\n"+
+        "Appareil Fibroscopie N°2 - n° série : 210 31 12\n"+
+        "Protocole de désinfection conforme à la circulaire DGH/DH n° 96-236 du 12 avril 1996. L'opérateur s'est assuré de la validation finale du protocole de désinfection : Oui\n"+
+        "Préparation : 3 litres de FORTRANS\n"+
+        "Score de BOSTON : Colon droit :  3  // Colon transverse :  3  // Colon Gauche - Rectum : 3  // Total : 9 \n"+
+        "Tolérance : Bonne\n\n"+
+        "INDICATION : \n\n"+
+        "RESULTATS :\n\n"+
+        "Progression facile dans un colon bien préparé jusque dans le caecum\n\n"+
+        "Toucher rectal : normal\n\n"+
+        "Marge anale : normale\n\n"+
+        "Canal anal : normal\n\n"+
+        "Rectum : normal\n\n"+
+        "Sigmoide : normal\n\n"+
+        "Colon gauche : normal\n\n"+
+        "Angle gauche : normal\n\n"+
+        "Colon transverse : normal\n\n"+
+        "Angle droit : normal\n\n"+
+        "Colon droit : normal\n\n"+
+        "Caecum : normal\n\n"+
+        "Valvule de Bauhin : normal\n\n"+
+        "Iléon terminal : normal\n\n"+
+        "CONCLUSION : Coloscopie totale normale\n"
+      );
+    }
+
+    function tplECHO(){
+      return (
+        "TECHNIQUE :\n"+
+        "Lieu : Clinique PAOFAI, Opérateur : Dr. J-A Bronstein\n"+
+        "Appareil : Sonde convexe haute résolution\n"+
+        "Tolérance : Bonne\n\n"+
+        "INDICATION : \n\n"+
+        "RÉSULTATS :\n\n"+
+        "Foie : Taille et échostructure normales, sans lésion focale visible\n\n"+
+        "Voies biliaires : Non dilatées\n\n"+
+        "Vésicule biliaire : Parois fines, pas de lithiases\n\n"+
+        "Pancréas : Visualisation correcte, échostructure conservée\n\n"+
+        "Rate : Taille normale, homogène\n\n"+
+        "Reins : Taille conservée, pas d'hydronéphrose, pas de lésion focale\n\n"+
+        "Aorte et VCI : Calibre normal, pas d'anévrysme\n\n"+
+        "Vessie : Paroi fine, contenu anéchogène\n\n"+
+        "Prostate/Utérus-Annexes : Aspect dans les limites de la normale (selon contexte)\n\n"+
+        "CONCLUSION : Échographie abdominale normale\n"
+      );
+    }
+
+    function tplSYN(){
+      const nom = (getField('id_nom')?.value || '').trim();
+      const prenom = (getField('id_prenom')?.value || '').trim();
+      const dna = (getField('id_date_naissance')?.value || '').trim();
+      const today = fmtDate(new Date());
+      const dnaStr = dna ? dna.split('-').reverse().join('/') : 'XX/XX/XXXX';
+      return (
+        "Cher collègue,\n\n"+
+        `M. (Mme) ${nom} ${prenom}, né(e) le ${dnaStr}, a été hospitalisé(e) dans le service des hospitalisations ambulatoires le ${today} pour dépistage endoscopique sous AG.\n\n`+
+        "La gastroscopie est normale. Il n'y a pas d'anomalie des muqueuses duodénale, antrale, fundique et œsophagienne. Aucune biopsie n'a été réalisée.\n\n"+
+        "La coloscopie est complète, menée jusque dans le caecum. Le colon est correctement préparé, et toute la muqueuse est examinée. Au retrait du coloscope, il n'a pas été mis en évidence d'anomalie de la muqueuse (caecum, colon droit, colon transverse, colon gauche, sigmoïde et rectum). Il n'y a pas lieu d'envisager un contrôle avant cinq ans, sauf si apparaissent entre‑temps des rectorragies, des douleurs abdominales, ou un trouble du transit.\n\n"+
+        "— Variante si polypes —\n"+
+        "La coloscopie est complète, menée jusque dans le caecum. Le colon est correctement préparé, et toute la muqueuse est examinée. Au retrait du coloscope, on enlève X polype(s) à la pince biopsique. Il n'y a pas lieu d'envisager un contrôle avant cinq ans, sauf si apparaissent entre‑temps des rectorragies, des douleurs abdominales, ou un trouble du transit.\n\n"+
+        "Je te remercie de ta confiance et je reste à ta disposition.\n"
+      );
+    }
+
+    const map = { 'FOGD': tplFOGD, 'COLO': tplCOLO, 'ECHO': tplECHO, 'SYN': tplSYN };
+    const typeSel = document.getElementById('id_type_courrier');
+    const corps = document.getElementById('id_corps');
+    if (typeSel && corps) {
+      typeSel.addEventListener('change', function(){
+        const tp = this.value;
+        if (map[tp]) {
+          if (!corps.value || confirm('Remplacer le texte actuel par le modèle sélectionné ?')) {
+            corps.value = map[tp]();
+          }
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}

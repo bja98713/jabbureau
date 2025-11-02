@@ -76,4 +76,12 @@ urlpatterns = [
     path('observations/id/<int:pk>/email/', views.observation_send_email, name='observation_send_email'),
     path('observations/<str:dn>/pdf/', views.observations_pdf, name='observations_pdf'),
     path('observations/<str:dn>/email/', views.observations_send_email, name='observations_send_email'),
+
+    # Courriers
+    path('courriers/<str:dn>/', views.courriers_by_dn, name='courriers_by_dn'),
+    path('courriers/<str:dn>/new/', views.courrier_create, name='courrier_create_for_dn'),
+    path('courriers/<int:pk>/edit/', views.courrier_update, name='courrier_update'),
+    path('courriers/<int:pk>/delete/', views.courrier_delete, name='courrier_delete'),
+    path('courriers/id/<int:pk>/pdf/', views.courrier_pdf, name='courrier_pdf'),
+    path('courriers/id/<int:pk>/email/', views.courrier_send_email, name='courrier_send_email'),
 ]

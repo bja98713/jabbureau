@@ -24,11 +24,13 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',  # <— doit être là
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'comptabilite.middleware.UpdateLastSeenMiddleware',
     # … votre propre middleware ici …
 ]
@@ -86,7 +88,7 @@ STATICFILES_DIRS = [ BASE_DIR / 'static' ]
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/facturation/'  # ou l’URL vers laquelle l’utilisateur authentifié doit être envoyé
+LOGIN_REDIRECT_URL = '/facturation/patients/'  # redirige vers la liste des patients après connexion
 LOGOUT_REDIRECT_URL = 'login'
 
 EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
@@ -98,4 +100,16 @@ EMAIL_HOST_USER     = 'ja.bronstein@gmail.com'
 EMAIL_HOST_PASSWORD = 'afwg flrc buze usok'
 
 DEFAULT_FROM_EMAIL  = 'Pr. Jean-Ariel Bronstein <ja.bronstein@gmail.com>'
+
+# Réglages de sécurité appliqués seulement en production
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
 
