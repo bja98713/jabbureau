@@ -1,7 +1,13 @@
 import os
 from pathlib import Path
 import pdfkit
-from dotenv import load_dotenv
+
+# Chargeur .env optionnel: ne casse pas si python-dotenv n'est pas installé en prod
+try:
+    from dotenv import load_dotenv  # type: ignore
+except Exception:  # ImportError ou autre
+    def load_dotenv(*args, **kwargs):  # type: ignore
+        return False
 
 # Chemin de base du projet
 BASE_DIR = Path(__file__).resolve().parent.parent
