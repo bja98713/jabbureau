@@ -111,7 +111,10 @@ EMAIL_USE_TLS       = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('1','true',
 EMAIL_HOST_USER     = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 
-DEFAULT_FROM_EMAIL  = os.getenv('DEFAULT_FROM_EMAIL', 'Pr. Jean-Ariel Bronstein <no-reply@example.com>')
+# Par défaut, utiliser l'adresse authentifiée comme expéditeur si disponible
+_default_from = f"Pr. Jean-Ariel Bronstein <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else 'Pr. Jean-Ariel Bronstein <no-reply@example.com>'
+DEFAULT_FROM_EMAIL  = os.getenv('DEFAULT_FROM_EMAIL', _default_from)
+SERVER_EMAIL        = os.getenv('SERVER_EMAIL', EMAIL_HOST_USER or 'server@example.com')
 
 # Réglages de sécurité appliqués seulement en production
 if not DEBUG:
