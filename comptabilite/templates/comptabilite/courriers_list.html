@@ -13,6 +13,8 @@
       <a class="dropdown-item" href="{% url 'courrier_create_for_dn' patient.dn %}?type=COLO">Coloscopie</a>
       <a class="dropdown-item" href="{% url 'courrier_create_for_dn' patient.dn %}?type=ECHO">Échographie abdominale</a>
       <a class="dropdown-item" href="{% url 'courrier_create_for_dn' patient.dn %}?type=SYN">Courrier de synthèse</a>
+      <div class="dropdown-divider"></div>
+      <a class="dropdown-item" href="{% url 'courrier_create_for_dn' patient.dn %}?type=CONS">Fiche de consentement éclairé</a>
     </div>
   </div>
 </div>

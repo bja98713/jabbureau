@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Fiches d'information patient{% endblock %}
+{% block content %}
+<h2>Fiches d'information patient</h2>
+<p>
+  Accès direct au site ANGH: 
+  <a href="{{ external_url }}" target="_blank" rel="noopener noreferrer">{{ external_url }}</a>
+</p>
+
+{% if local_pdfs %}
+  <h4 class="mt-4">Fiches disponibles localement</h4>
+  <ul>
+    {% for fn in local_pdfs %}
+      <li>
+        <a href="{% static 'fiches/'|add:fn %}" target="_blank" rel="noopener">{{ fn }}</a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="text-muted">Ces fichiers sont servis depuis votre application (dossier <code>static/fiches/</code>).</p>
+{% else %}
+  <div class="alert alert-info">Aucun PDF local n'est encore disponible. Utilisez la commande de récupération ou ajoutez des fichiers dans <code>static/fiches/</code>.</div>
+{% endif %}
+
+<p class="mt-4 text-muted">
+  Astuce: vous pouvez récupérer automatiquement les PDFs du site ANGH avec une commande de gestion
+  (<code>python manage.py fetch_fiches_information</code>), puis recharger cette page.
+</p>
+{% endblock %}

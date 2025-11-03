@@ -13,6 +13,26 @@
   <div class="form-row">
     <div class="form-group col-md-4">{{ form.type_courrier.label_tag }} {{ form.type_courrier }}</div>
   </div>
+  <!-- Options spécifiques pour la fiche de consentement -->
+  <div class="form-row" id="cons-options" style="display:none;">
+    <div class="form-group col-md-6">
+      <label for="cons_exam_type">Type d'examen</label>
+      <select id="cons_exam_type" class="form-control">
+        <option value="">— Sélectionnez —</option>
+        <option>gastroscopie et coloscopie sous anesthésie</option>
+        <option>gastroscopie et coloscopie sans anesthésie</option>
+        <option>gastroscopie avec anesthésie</option>
+        <option>gastroscopie sans anesthésie</option>
+        <option>coloscopie avec anesthésie</option>
+        <option>coloscopie sans anesthésie</option>
+        <option>echoendoscopie haute avec anesthésie</option>
+      </select>
+    </div>
+    <div class="form-group col-md-6">
+      <label for="cons_exam_date">Date présumée de l'examen</label>
+      <input id="cons_exam_date" type="date" class="form-control" />
+    </div>
+  </div>
   <div class="form-group">{{ form.corps.label_tag }} {{ form.corps }}</div>
   <button type="submit" class="btn btn-primary">Enregistrer</button>
   {% if dn %}
@@ -109,7 +129,7 @@
       );
     }
 
-    function tplSYN(){
+  function tplSYN(){
       const nom = (getField('id_nom')?.value || '').trim();
       const prenom = (getField('id_prenom')?.value || '').trim();
       const dna = (getField('id_date_naissance')?.value || '').trim();
@@ -126,9 +146,38 @@
       );
     }
 
-    const map = { 'FOGD': tplFOGD, 'COLO': tplCOLO, 'ECHO': tplECHO, 'SYN': tplSYN };
+    function tplCONS(){
+      const nom = (getField('id_nom')?.value || '').trim();
+      const prenom = (getField('id_prenom')?.value || '').trim();
+      const dna = (getField('id_date_naissance')?.value || '').trim();
+      const dnaStr = dna ? dna.split('-').reverse().join('/') : 'XX/XX/XXXX';
+      const exam = (document.getElementById('cons_exam_type')?.value || '').trim() || '[sélection ci‑dessous]';
+      const d = document.getElementById('cons_exam_date')?.value || '';
+      const dStr = d ? d.split('-').reverse().join('/') : 'JJ/MM/AAAA';
+      const today = fmtDate(new Date());
+      return (
+        "FICHE DE CONSENTEMENT ÉCLAIRÉ\n\n"+
+        `Patient : ${nom} ${prenom}, né(e) le ${dnaStr}\n\n`+
+        `Examen prévu : ${exam}\n`+
+        `Date présumée de l'examen : ${dStr}\n\n`+
+        "Information délivrée au patient :\n"+
+        "- Bénéfices attendus de l'examen\n"+
+        "- Risques potentiels (hémorragie, perforation, infection, effets de l'anesthésie)\n"+
+        "- Alternatives possibles\n"+
+        "- Réponses aux questions posées\n\n"+
+        "Consentement :\n"+
+        "Le patient déclare avoir reçu une information claire, loyale et appropriée, et consent à la réalisation de l'examen sus‑mentionné.\n\n"+
+        `Date : ${today}\n`+
+        "Signature du patient : __________________________\n\n"
+      );
+    }
+
+    const map = { 'FOGD': tplFOGD, 'COLO': tplCOLO, 'ECHO': tplECHO, 'SYN': tplSYN, 'CONS': tplCONS };
     const typeSel = document.getElementById('id_type_courrier');
     const corps = document.getElementById('id_corps');
+    const consRow = document.getElementById('cons-options');
+    const consExam = document.getElementById('cons_exam_type');
+    const consDate = document.getElementById('cons_exam_date');
     if (typeSel && corps) {
       typeSel.addEventListener('change', function(){
         const tp = this.value;
@@ -137,7 +186,24 @@
             corps.value = map[tp]();
           }
         }
+        // Affichage des options spécifiques au consentement
+        if (consRow) consRow.style.display = (tp === 'CONS') ? '' : 'none';
       });
+    }
+
+    // Quand on modifie le type d'examen ou la date pour CONS, on régénère le corps
+    function onConsChange(){
+      if (typeSel?.value === 'CONS' && map['CONS']) {
+        // Ne pas demander confirmation ici: on suppose que l'utilisateur utilise ces champs pour générer le texte
+        corps.value = map['CONS']();
+      }
+    }
+    if (consExam) consExam.addEventListener('change', onConsChange);
+    if (consDate) consDate.addEventListener('change', onConsChange);
+
+    // Initialiser l'affichage si on arrive avec type déjà sur CONS (mode update)
+    if (consRow && typeSel?.value === 'CONS') {
+      consRow.style.display = '';
     }
   })();
 </script>

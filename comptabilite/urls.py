@@ -59,6 +59,8 @@ urlpatterns = [
     path('export/excel/', views.export_all_data_excel, name='export_all_data_excel'),
     path('export/excel/filtered/', views.export_filtered_data_excel, name='export_filtered_data_excel'),
     path('export/', views.export_excel_page, name='export_excel_page'),
+    # Fiches d'information patients
+    path('fiches-info/', views.fiches_information, name='fiches_information'),
     # Patients
     path('patients/', views.patients_list, name='patients_list'),
     path('patients/<str:dn>/', views.patients_detail, name='patients_detail'),

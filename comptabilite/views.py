@@ -1650,6 +1650,28 @@ def courrier_create(request, dn: str):
                 "La coloscopie est complète, menée jusque dans le caecum. Le colon est correctement préparé, et toute la muqueuse est examinée. Au retrait du coloscope, on enlève X polype(s) à la pince biopsique. Il n'y a pas lieu d'envisager un contrôle avant cinq ans, sauf si apparaissent entre‑temps des rectorragies, des douleurs abdominales, ou un trouble du transit.\n\n"
                 "Je te remercie de ta confiance et je reste à ta disposition.\n"
             )
+    elif tp == 'CONS':
+            from django.utils import timezone as _tz
+            today = _tz.localdate().strftime('%d/%m/%Y')
+            nom = (initial.get('nom') or '').strip()
+            prenom = (initial.get('prenom') or '').strip()
+            dna = initial.get('date_naissance')
+            dna_str = dna.strftime('%d/%m/%Y') if dna else 'XX/XX/XXXX'
+            initial['corps'] = (
+                "FICHE DE CONSENTEMENT ÉCLAIRÉ\n\n"
+                f"Patient : {nom} {prenom}, né(e) le {dna_str} (DN {dn})\n\n"
+                "Examen prévu : [sélection ci‑dessous]\n"
+                "Date présumée de l'examen : JJ/MM/AAAA\n\n"
+                "Information délivrée au patient :\n"
+                "- Bénéfices attendus de l'examen\n"
+                "- Risques potentiels (hémorragie, perforation, infection, effets de l'anesthésie)\n"
+                "- Alternatives possibles\n"
+                "- Réponses aux questions posées\n\n"
+                "Consentement :\n"
+                "Le patient déclare avoir reçu une information claire, loyale et appropriée, et consent à la réalisation de l'examen sus‑mentionné.\n\n"
+                f"Date : {today}\\n"
+                "Signature du patient : __________________________\\n\\n"
+            )
     form = CourrierForm(request.POST or None, initial=initial)
     if form.is_valid():
         c = form.save()
@@ -1697,6 +1719,8 @@ def courrier_pdf(request, pk: int):
         template_name = 'comptabilite/courrier_echo_pdf.html'
     elif c.type_courrier == 'SYN':
         template_name = 'comptabilite/courrier_syn_pdf.html'
+    elif c.type_courrier == 'CONS':
+        template_name = 'comptabilite/courrier_cons_pdf.html'
 
     html_string = render_to_string(template_name, {
         'patient': patient,
@@ -1737,7 +1761,7 @@ def courrier_send_email(request, pk: int):
             default_subject = f"{type_label} – {date_str} – {patient.nom} {patient.prenom} (DN {patient.dn})"
             default_body = "Bonjour,\n\nVeuillez trouver ci-joint le courrier.\n\nBien cordialement,\nDr. Bronstein"
             # Destinataires par défaut selon type
-            if c.type_courrier in ('FOGD', 'COLO', 'ECHO'):
+            if c.type_courrier in ('FOGD', 'COLO', 'ECHO', 'CONS'):
                 default_to = 'secretariat@bronstein.fr'
                 default_cc = cc or 'lwuilmet@polyclinique-paofai.pf'
             elif c.type_courrier == 'SYN':
@@ -1795,7 +1819,7 @@ def courrier_send_email(request, pk: int):
     default_subject = f"{type_label} – {date_str} – {patient.nom} {patient.prenom} (DN {patient.dn})"
     default_body = "Bonjour,\n\nVeuillez trouver ci-joint le courrier.\n\nBien cordialement,\nDr. Bronstein"
     # Définir les destinataires par défaut selon le type
-    if c.type_courrier in ('FOGD', 'COLO', 'ECHO'):
+    if c.type_courrier in ('FOGD', 'COLO', 'ECHO', 'CONS'):
         default_to = 'secretariat@bronstein.fr'
         default_cc = 'lwuilmet@polyclinique-paofai.pf'
     elif c.type_courrier == 'SYN':
@@ -2146,3 +2170,28 @@ def export_excel_page(request):
     Page d'export des données en Excel avec options de filtrage
     """
     return render(request, 'comptabilite/export_excel.html')
+
+
+# ========== Fiches d'information (liens + PDFs locaux) ==========
+
+def fiches_information(request):
+    """Affiche la page des fiches d'information patient.
+
+    - Lien externe vers le site ANGH.
+    - Liste des PDFs disponibles localement dans static/fiches/ (si présents).
+    """
+    external_url = "https://angh.net/pratique-2/fiches-information-patient/"
+    fiches_dir = os.path.join(settings.BASE_DIR, 'static', 'fiches')
+    local_pdfs = []
+    try:
+        if os.path.isdir(fiches_dir):
+            for fn in sorted(os.listdir(fiches_dir)):
+                if fn.lower().endswith('.pdf'):
+                    local_pdfs.append(fn)
+    except Exception:
+        pass
+
+    return render(request, 'comptabilite/fiches_information.html', {
+        'external_url': external_url,
+        'local_pdfs': local_pdfs,
+    })

@@ -377,6 +377,7 @@ class Courrier(models.Model):
         ('COLO', 'Coloscopie'),
         ('ECHO', 'Échographie abdominale'),
         ('SYN',  'Courrier de synthèse'),
+        ('CONS', 'Fiche de consentement éclairé'),
     ]
 
     dn = models.CharField(max_length=7, db_index=True, verbose_name="DN")

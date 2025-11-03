@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import pdfkit
 
 # Chargeur .env optionnel: ne casse pas si python-dotenv n'est pas installé en prod
 try:
