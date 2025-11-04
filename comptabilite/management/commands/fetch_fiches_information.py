@@ -6,6 +6,7 @@ from html.parser import HTMLParser
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.utils.text import slugify
 
 SOURCE_URL = "https://angh.net/pratique-2/fiches-information-patient/"
 
@@ -46,20 +47,37 @@ class Command(BaseCommand):
         os.makedirs(out_dir, exist_ok=True)
 
         def sanitize(name: str) -> str:
-            # Simple sanitize: keep basename and strip query string; replace spaces
+            """
+            Create a safe ASCII filename while preserving the file extension.
+            - Drop query string
+            - Keep basename
+            - Slugify stem (transliterate accents, spaces -> '-')
+            - Lowercase extension
+            """
             name = name.split('?')[0]
             name = os.path.basename(name)
-            return re.sub(r'\s+', '_', name)
+            stem, ext = os.path.splitext(name)
+            safe_stem = slugify(stem) or 'file'
+            safe_ext = (ext or '').lower()
+            return f"{safe_stem}{safe_ext}"
 
         for url in sorted(set(pdf_links)):
+            # Build a percent-encoded URL for any non-ASCII path segments
+            try:
+                parsed = urllib.parse.urlsplit(url)
+                safe_path = urllib.parse.quote(parsed.path)
+                safe_url = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, safe_path, parsed.query, parsed.fragment))
+            except Exception:
+                safe_url = url
+
             fname = sanitize(url)
             dest_path = os.path.join(out_dir, fname)
             if os.path.exists(dest_path):
                 self.stdout.write(f"Skip (exists): {fname}")
                 continue
-            self.stdout.write(f"Downloading: {url} → {fname}")
+            self.stdout.write(f"Downloading: {safe_url} → {fname}")
             try:
-                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                req = urllib.request.Request(safe_url, headers={'User-Agent': 'Mozilla/5.0'})
                 with urllib.request.urlopen(req) as r, open(dest_path, 'wb') as f:
                     f.write(r.read())
             except Exception as e:
