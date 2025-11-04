@@ -8,4 +8,7 @@ __pycache__/
 *.pyc
 .env
 *.pdf
-!static/fiches/*.pdf
+
+# macOS metadata files
+.DS_Store
+**/.DS_Store
