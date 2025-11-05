@@ -37,7 +37,7 @@
 
   <div class="date-left">Date : {{ courrier.date_courrier|date:'d/m/Y' }}</div>
 
-  <div class="title">COLOSCOPIE TOTALE DE {{ patient.prenom }} {{ patient.nom }}, né(e) {% if patient.date_naissance %}{{ patient.date_naissance|date:'d/m/Y' }}{% endif %}</div>
+  <div class="title">COLOSCOPIE DE {{ patient.prenom }} {{ patient.nom }}, né(e) {% if patient.date_naissance %}{{ patient.date_naissance|date:'d/m/Y' }}{% endif %}</div>
 
   <div class="content">{{ courrier.corps }}</div>
 
