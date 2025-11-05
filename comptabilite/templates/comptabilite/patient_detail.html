@@ -33,6 +33,7 @@
           <a class="dropdown-item" href="{% url 'courrier_create_for_dn' patient.dn %}?type=SYN">Courrier de synthèse</a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item" href="{% url 'courrier_create_for_dn' patient.dn %}?type=CONS">Fiche de consentement éclairé</a>
+          <a class="dropdown-item" href="{% url 'courrier_create_for_dn' patient.dn %}?type=ATRE">Attestation de retour</a>
         </div>
       </div>
       <a class="btn btn-outline-secondary" href="{% url 'observations_pdf' patient.dn %}" target="_blank">PDF des observations</a>

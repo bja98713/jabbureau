@@ -1658,7 +1658,7 @@ def courrier_create(request, dn: str):
             dna = initial.get('date_naissance')
             dna_str = dna.strftime('%d/%m/%Y') if dna else 'XX/XX/XXXX'
             initial['corps'] = (
-                "FICHE DE CONSENTEMENT ÉCLAIRÉ\n\n"
+                "\n\n"
                 f"Patient : {nom} {prenom}, né(e) le {dna_str} (DN {dn})\n\n"
                 "Examen prévu : [sélection ci‑dessous]\n"
                 "Date présumée de l'examen : JJ/MM/AAAA\n\n"
@@ -1671,6 +1671,19 @@ def courrier_create(request, dn: str):
                 "Le patient déclare avoir reçu une information claire, loyale et appropriée, et consent à la réalisation de l'examen sus‑mentionné.\n\n"
                 f"Date : {today}\\n"
                 "Signature du patient : __________________________\\n\\n"
+            )
+    elif tp == 'ATRE':
+            from django.utils import timezone as _tz
+            today = _tz.localdate().strftime('%d/%m/%Y')
+            nom = (initial.get('nom') or '').strip()
+            prenom = (initial.get('prenom') or '').strip()
+            dna = initial.get('date_naissance')
+            dna_str = dna.strftime('%d/%m/%Y') if dna else 'XX/XX/XXXX'
+            initial['corps'] = (
+                "\n\n"
+                f"Je soussigné Docteur Jean-Ariel BRONSTEIN, certifie que l'état de santé de M.(Mme) {nom} {prenom}, né(e) le {dna_str}, N° DN {dn} l'autorise à retourner par voie aérienne [accompagné(e) / non accompagné(e)].\n\n"
+                "Certificat réalisé à la demande de l'intéressé(e) pour servir et remis pour faire valoir ce que de droit.\n\n"
+                f"Date : {today}\\n\n"
             )
     form = CourrierForm(request.POST or None, initial=initial)
     if form.is_valid():
@@ -1721,6 +1734,8 @@ def courrier_pdf(request, pk: int):
         template_name = 'comptabilite/courrier_syn_pdf.html'
     elif c.type_courrier == 'CONS':
         template_name = 'comptabilite/courrier_cons_pdf.html'
+    elif c.type_courrier == 'ATRE':
+        template_name = 'comptabilite/courrier_attestation_retour_pdf.html'
 
     html_string = render_to_string(template_name, {
         'patient': patient,
@@ -1819,7 +1834,7 @@ def courrier_send_email(request, pk: int):
     default_subject = f"{type_label} – {date_str} – {patient.nom} {patient.prenom} (DN {patient.dn})"
     default_body = "Bonjour,\n\nVeuillez trouver ci-joint le courrier.\n\nBien cordialement,\nDr. Bronstein"
     # Définir les destinataires par défaut selon le type
-    if c.type_courrier in ('FOGD', 'COLO', 'ECHO', 'CONS'):
+    if c.type_courrier in ('FOGD', 'COLO', 'ECHO', 'CONS', 'ATRE'):
         default_to = 'secretariat@bronstein.fr'
         default_cc = 'lwuilmet@polyclinique-paofai.pf'
     elif c.type_courrier == 'SYN':

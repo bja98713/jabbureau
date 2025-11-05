@@ -33,6 +33,17 @@
       <input id="cons_exam_date" type="date" class="form-control" />
     </div>
   </div>
+  <!-- Options spécifiques pour l'attestation de retour -->
+  <div class="form-row" id="atre-options" style="display:none;">
+    <div class="form-group col-md-6">
+      <label for="atre_accomp">Mode de retour</label>
+      <select id="atre_accomp" class="form-control">
+        <option value="">— Sélectionnez —</option>
+        <option>accompagné(e)</option>
+        <option>non accompagné(e)</option>
+      </select>
+    </div>
+  </div>
   <div class="form-group">{{ form.corps.label_tag }} {{ form.corps }}</div>
   <button type="submit" class="btn btn-primary">Enregistrer</button>
   {% if dn %}
@@ -146,7 +157,7 @@
       );
     }
 
-    function tplCONS(){
+  function tplCONS(){
       const nom = (getField('id_nom')?.value || '').trim();
       const prenom = (getField('id_prenom')?.value || '').trim();
       const dna = (getField('id_date_naissance')?.value || '').trim();
@@ -156,7 +167,7 @@
       const dStr = d ? d.split('-').reverse().join('/') : 'JJ/MM/AAAA';
       const today = fmtDate(new Date());
       return (
-        "FICHE DE CONSENTEMENT ÉCLAIRÉ\n\n"+
+        "\n\n"+
         `Patient : ${nom} ${prenom}, né(e) le ${dnaStr}\n\n`+
         `Examen prévu : ${exam}\n`+
         `Date présumée de l'examen : ${dStr}\n\n`+
@@ -172,12 +183,30 @@
       );
     }
 
-    const map = { 'FOGD': tplFOGD, 'COLO': tplCOLO, 'ECHO': tplECHO, 'SYN': tplSYN, 'CONS': tplCONS };
+    function tplATRE(){
+      const nom = (getField('id_nom')?.value || '').trim();
+      const prenom = (getField('id_prenom')?.value || '').trim();
+      const dna = (getField('id_date_naissance')?.value || '').trim();
+      const dnaStr = dna ? dna.split('-').reverse().join('/') : 'XX/XX/XXXX';
+      const dn = (getField('id_dn')?.value || '').trim();
+      const accomp = (document.getElementById('atre_accomp')?.value || '').trim() || '[accompagné(e) / non accompagné(e)]';
+      const today = fmtDate(new Date());
+      return (
+        "\n\n"+
+        `Je soussigné Docteur Jean-Ariel BRONSTEIN, certifie que l'état de santé de M.(Mme) ${nom} ${prenom}, né(e) le ${dnaStr}, N° DN ${dn} l'autorise à retourner par voie aérienne ${accomp}.\n\n`+
+        "Certificat réalisé à la demande de l'intéressé(e) pour servir et remis pour faire valoir ce que de droit.\n\n"+
+        `Date : ${today}\n\n`
+      );
+    }
+
+    const map = { 'FOGD': tplFOGD, 'COLO': tplCOLO, 'ECHO': tplECHO, 'SYN': tplSYN, 'CONS': tplCONS, 'ATRE': tplATRE };
     const typeSel = document.getElementById('id_type_courrier');
     const corps = document.getElementById('id_corps');
     const consRow = document.getElementById('cons-options');
+    const atreRow = document.getElementById('atre-options');
     const consExam = document.getElementById('cons_exam_type');
     const consDate = document.getElementById('cons_exam_date');
+    const atreAccomp = document.getElementById('atre_accomp');
     if (typeSel && corps) {
       typeSel.addEventListener('change', function(){
         const tp = this.value;
@@ -188,6 +217,7 @@
         }
         // Affichage des options spécifiques au consentement
         if (consRow) consRow.style.display = (tp === 'CONS') ? '' : 'none';
+        if (atreRow) atreRow.style.display = (tp === 'ATRE') ? '' : 'none';
       });
     }
 
@@ -201,9 +231,19 @@
     if (consExam) consExam.addEventListener('change', onConsChange);
     if (consDate) consDate.addEventListener('change', onConsChange);
 
+    function onAtreChange(){
+      if (typeSel?.value === 'ATRE' && map['ATRE']) {
+        corps.value = map['ATRE']();
+      }
+    }
+    if (atreAccomp) atreAccomp.addEventListener('change', onAtreChange);
+
     // Initialiser l'affichage si on arrive avec type déjà sur CONS (mode update)
     if (consRow && typeSel?.value === 'CONS') {
       consRow.style.display = '';
+    }
+    if (atreRow && typeSel?.value === 'ATRE') {
+      atreRow.style.display = '';
     }
   })();
 </script>
