@@ -1,4 +1,12 @@
 from django.contrib import admin
+from .models import BiopsyReminder
+
+
+@admin.register(BiopsyReminder)
+class BiopsyReminderAdmin(admin.ModelAdmin):
+    list_display = ("dn", "nom", "prenom", "type_examen", "destination", "exam_date", "send_on", "sent")
+    list_filter = ("type_examen", "destination", "sent", "send_on")
+    search_fields = ("dn", "nom", "prenom")
 from .models import Code, Medecin, Message, Patient
 from .models import ParametrageFacturation
 

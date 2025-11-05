@@ -1688,6 +1688,29 @@ def courrier_create(request, dn: str):
     form = CourrierForm(request.POST or None, initial=initial)
     if form.is_valid():
         c = form.save()
+        # Création éventuelle d'un rappel anapath si biopsie réalisée (FOGD/COLO)
+        try:
+            tp_courrier = c.type_courrier
+            if tp_courrier in ('FOGD', 'COLO') and request.POST.get('biopsie_realisee'):
+                from django.utils import timezone as _tz
+                from .models import BiopsyReminder
+                dest = (request.POST.get('biopsie_destination') or '').upper()
+                if dest in dict(BiopsyReminder.DEST_CHOICES):
+                    exam_date = _tz.localdate()
+                    send_on = exam_date + _tz.timedelta(days=28)
+                    BiopsyReminder.objects.create(
+                        dn=c.dn,
+                        nom=c.nom,
+                        prenom=c.prenom,
+                        date_naissance=c.date_naissance,
+                        type_examen=tp_courrier,
+                        destination=dest,
+                        exam_date=exam_date,
+                        send_on=send_on,
+                    )
+        except Exception:
+            # On ne bloque pas la création du courrier si le rappel échoue
+            pass
         return redirect('courriers_by_dn', dn=c.dn)
     return render(request, 'comptabilite/courrier_form.html', {'form': form, 'mode': 'create', 'dn': dn})
 

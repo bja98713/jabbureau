@@ -44,6 +44,24 @@
       </select>
     </div>
   </div>
+  <!-- Options biopsies pour FOGD/COLO -->
+  <div class="form-row" id="biopsy-options" style="display:none;">
+    <div class="form-group col-md-3">
+      <div class="form-check mt-4">
+        <input class="form-check-input" type="checkbox" id="biopsie_realisee" name="biopsie_realisee" />
+        <label class="form-check-label" for="biopsie_realisee">Biopsie réalisée</label>
+      </div>
+    </div>
+    <div class="form-group col-md-9">
+      <label for="biopsie_destination">Destination des biopsies</label>
+      <select id="biopsie_destination" name="biopsie_destination" class="form-control">
+        <option value="">— Sélectionnez —</option>
+        <option value="CERBA">CERBA - France</option>
+        <option value="CHT">Service anatomo-pathologie - CHT</option>
+      </select>
+      <small class="form-text text-muted">Un e‑mail de rappel sera envoyé 4 semaines après l'examen.</small>
+    </div>
+  </div>
   <div class="form-group">{{ form.corps.label_tag }} {{ form.corps }}</div>
   <button type="submit" class="btn btn-primary">Enregistrer</button>
   {% if dn %}
@@ -207,6 +225,7 @@
     const consExam = document.getElementById('cons_exam_type');
     const consDate = document.getElementById('cons_exam_date');
     const atreAccomp = document.getElementById('atre_accomp');
+    const biopsyRow = document.getElementById('biopsy-options');
     if (typeSel && corps) {
       typeSel.addEventListener('change', function(){
         const tp = this.value;
@@ -218,7 +237,13 @@
         // Affichage des options spécifiques au consentement
         if (consRow) consRow.style.display = (tp === 'CONS') ? '' : 'none';
         if (atreRow) atreRow.style.display = (tp === 'ATRE') ? '' : 'none';
+        if (biopsyRow) biopsyRow.style.display = (tp === 'FOGD' || tp === 'COLO') ? '' : 'none';
       });
+      // Réglage initial de la visibilité sans toucher au corps
+      const initTp = typeSel.value;
+      if (consRow) consRow.style.display = (initTp === 'CONS') ? '' : 'none';
+      if (atreRow) atreRow.style.display = (initTp === 'ATRE') ? '' : 'none';
+      if (biopsyRow) biopsyRow.style.display = (initTp === 'FOGD' || initTp === 'COLO') ? '' : 'none';
     }
 
     // Quand on modifie le type d'examen ou la date pour CONS, on régénère le corps

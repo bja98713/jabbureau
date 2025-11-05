@@ -405,6 +405,48 @@ class Courrier(models.Model):
     def __str__(self):  # pragma: no cover
         return f"{self.type_label()} – {self.nom} {self.prenom} ({self.dn})"
 
+
+# === Rappel Anapath (biopsies) après FOGD/COLO ===
+class BiopsyReminder(models.Model):
+    EXAM_CHOICES = [
+        ('FOGD', 'Fibroscopie gastrique'),
+        ('COLO', 'Coloscopie'),
+    ]
+    DEST_CHOICES = [
+        ('CERBA', 'CERBA - France'),
+        ('CHT', 'Service anatomo-pathologie - CHT'),
+    ]
+
+    dn = models.CharField(max_length=7, db_index=True, verbose_name="DN")
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    date_naissance = models.DateField(null=True, blank=True)
+
+    type_examen = models.CharField(max_length=4, choices=EXAM_CHOICES)
+    destination = models.CharField(max_length=10, choices=DEST_CHOICES)
+
+    exam_date = models.DateField()
+    send_on = models.DateField(db_index=True, help_text="Date prévue d'envoi du rappel")
+
+    sent = models.BooleanField(default=False)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-send_on", "-created_at"]
+        indexes = [
+            models.Index(fields=["dn", "send_on", "sent"]),
+        ]
+
+    def destination_label(self):
+        return dict(self.DEST_CHOICES).get(self.destination, self.destination)
+
+    def __str__(self):  # pragma: no cover
+        when = self.send_on.strftime('%d/%m/%Y') if self.send_on else '—'
+        return f"Rappel anapath {self.type_examen} – {self.nom} {self.prenom} ({self.dn}) le {when} → {self.destination_label()}"
+
 from django.db import models
 
 class Statistique(models.Model):
