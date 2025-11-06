@@ -37,4 +37,18 @@ class Command(BaseCommand):
             src.close()
 
         self.stdout.write(self.style.SUCCESS(f"Sauvegarde terminée: {out_path}"))
+
+        # Rotation: conserver uniquement les 3 dernières sauvegardes
+        kept = 3
+        pattern = "db.*.sqlite3"
+        backups = sorted(backups_dir.glob(pattern))
+        if len(backups) > kept:
+            to_delete = backups[:-kept]  # tous sauf les 3 plus récents (tri lexicographique OK avec notre horodatage)
+            for p in to_delete:
+                try:
+                    p.unlink()
+                    self.stdout.write(f"Supprimé ancien backup: {p}")
+                except Exception as e:
+                    self.stderr.write(self.style.WARNING(f"Impossible de supprimer {p}: {e}"))
+
         return 0
