@@ -1681,7 +1681,7 @@ def courrier_create(request, dn: str):
             dna_str = dna.strftime('%d/%m/%Y') if dna else 'XX/XX/XXXX'
             initial['corps'] = (
                 "\n\n"
-                f"Je soussigné Docteur Jean-Ariel BRONSTEIN, certifie que l'état de santé de M.(Mme) {nom} {prenom}, né(e) le {dna_str}, N° DN {dn} l'autorise à retourner par voie aérienne [accompagné(e) / non accompagné(e)].\n\n"
+                f"Je soussigné Docteur Jean-Ariel BRONSTEIN, certifie que l'état de santé de M.(Mme) {nom} {prenom}, né(e) le {dna_str}, N° DN {dn} l'autorise à retourner vers son domicile par voie aérienne [accompagné(e) / non accompagné(e)].\n\n"
                 "Certificat réalisé à la demande de l'intéressé(e) pour servir et remis pour faire valoir ce que de droit.\n\n"
                 f"Date : {today}\n\n"
             )
