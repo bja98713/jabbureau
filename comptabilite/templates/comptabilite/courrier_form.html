@@ -66,6 +66,7 @@
   <button type="submit" class="btn btn-primary">Enregistrer</button>
   {% if dn %}
     <a href="{% url 'courriers_by_dn' dn %}" class="btn btn-link">Annuler</a>
+    <a href="{% url 'patients_detail' dn %}" class="btn btn-link">Retour à la fiche patient</a>
   {% endif %}
   {% if courrier %}
     <a class="btn btn-outline-secondary ml-2" href="{% url 'courrier_pdf' courrier.pk %}" target="_blank">PDF</a>
