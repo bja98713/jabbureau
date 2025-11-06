@@ -1828,6 +1828,10 @@ def courrier_send_email(request, pk: int):
             template_name = 'comptabilite/courrier_echo_pdf.html'
         elif c.type_courrier == 'SYN':
             template_name = 'comptabilite/courrier_syn_pdf.html'
+        elif c.type_courrier == 'CONS':
+            template_name = 'comptabilite/courrier_cons_pdf.html'
+        elif c.type_courrier == 'ATRE':
+            template_name = 'comptabilite/courrier_attestation_retour_pdf.html'
 
         html_string = render_to_string(template_name, {
             'patient': patient,

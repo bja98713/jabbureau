@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Synthèse – {{ patient.nom }} {{ patient.prenom }}</title>
-  <link rel="stylesheet" href="{% static 'css/pdf_styles.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pdf_styles.css' %}?v=20251106">
   <style>
     body { font-family: sans-serif; font-size: 14px; }
     .header { text-align: center; }
@@ -41,8 +41,16 @@
 
   <div class="content">{{ courrier.corps }}</div>
 
-  <div class="signature" style="margin-top: 40px; text-align: right; font-weight: bold;">
-    Dr Jean-Ariel BRONSTEIN
+  <div class="signature-row">
+    <div class="sig">Dr Jean-Ariel BRONSTEIN</div>
+    <div class="stamp-box">
+      <div class="strong">M3089</div>
+      Dr. Jean-Ariel<br>
+      BRONSTEIN<br>
+      Hépato-gastroentérologie<br>
+      Oncologie digestive<br>
+      Clinique Paofai
+    </div>
   </div>
 
   <div class="footer-note" style="margin-top: 10px; font-size: 11px; color: #b00000;">
