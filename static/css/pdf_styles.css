@@ -20,3 +20,54 @@ td, th {
   padding: 4px;
   text-align: left;
 }
+
+/* Signature row with stamp */
+.signature-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  margin-top: 40px;
+}
+.signature-row .sig {
+  font-weight: bold;
+}
+.signature-row .stamp-box {
+  margin-left: 16px;
+  border: 2px solid #1E5AA8; /* blue border for stamp effect */
+  color: #1E5AA8; /* blue text */
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.25;
+  text-align: center;
+  border-radius: 4px;
+  transform: rotate(-2deg);
+}
+.signature-row .stamp-box .strong {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+/* Coloscopie one-page optimizations */
+.colo-one-page {
+  /* tighter overall font to fit more content */
+  font-size: 11px;
+}
+.colo-one-page .header .clinic { font-size: 15px; }
+.colo-one-page .header .dept { margin-top: 6px; font-size: 13px; }
+.colo-one-page .header .doctor { margin-top: 6px; font-size: 11px; line-height: 1.3; }
+.colo-one-page .date-left { margin: 4px 0 6px 0; }
+.colo-one-page .title { margin: 4px 0 8px 0; font-size: 13px; }
+.colo-one-page .content { line-height: 1.28; font-size: 11px; }
+.colo-one-page .signature-row { margin-top: 24px; }
+.colo-one-page .signature-row .stamp-box { padding: 4px 8px; font-size: 10px; line-height: 1.15; }
+.colo-one-page .signature-row .stamp-box .strong { font-size: 11px; }
+
+/* Prevent accidental page breaks within key blocks */
+.colo-one-page .content,
+.colo-one-page .signature-row { page-break-inside: avoid; }
+
+/* Page margin reduction only for coloscopie (embedded as per template) */
+@page {
+  margin: 14mm 12mm 14mm 12mm; /* slightly reduced default margins */
+}
