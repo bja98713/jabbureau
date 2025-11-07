@@ -2,7 +2,7 @@
 {% block title %}{% if mode == 'update' %}Modifier courrier{% else %}Nouveau courrier{% endif %}{% endblock %}
 {% block content %}
 <h2>{% if mode == 'update' %}Modifier courrier{% else %}Nouveau courrier{% endif %}</h2>
-<form method="post">
+<form method="post" enctype="multipart/form-data">
   {% csrf_token %}
   <div class="form-row">
     <div class="form-group col-md-3">{{ form.dn.label_tag }} {{ form.dn }}</div>
@@ -63,6 +63,45 @@
     </div>
   </div>
   <div class="form-group">{{ form.corps.label_tag }} {{ form.corps }}</div>
+  {% comment %} Server-side fallback visibility for photos when eligible types are preselected {% endcomment %}
+  <div class="form-row" id="photos-options" {% if form.type_courrier.value == 'FOGD' or form.type_courrier.value == 'COLO' or form.type_courrier.value == 'ECHO' or form.type_courrier.value == 'SYN' %}{% else %}style="display:none;"{% endif %}>
+    <div class="form-group col-md-12">
+      <label>Photos (max 4, formats JPG/PNG)</label>
+      <div class="row">
+        <div class="col-3 mb-2">
+          <input type="file" name="photo1" accept="image/*" class="form-control-file" />
+          <input type="text" name="legend1" class="form-control form-control-sm mt-1" placeholder="Légende 1" />
+        </div>
+        <div class="col-3 mb-2">
+          <input type="file" name="photo2" accept="image/*" class="form-control-file" />
+          <input type="text" name="legend2" class="form-control form-control-sm mt-1" placeholder="Légende 2" />
+        </div>
+        <div class="col-3 mb-2">
+          <input type="file" name="photo3" accept="image/*" class="form-control-file" />
+          <input type="text" name="legend3" class="form-control form-control-sm mt-1" placeholder="Légende 3" />
+        </div>
+        <div class="col-3 mb-2">
+          <input type="file" name="photo4" accept="image/*" class="form-control-file" />
+          <input type="text" name="legend4" class="form-control form-control-sm mt-1" placeholder="Légende 4" />
+        </div>
+      </div>
+      {% if courrier and courrier.photos.all %}
+        <div class="mt-2">
+          <strong>Photos existantes :</strong>
+          <div class="d-flex flex-wrap">
+            {% for p in courrier.photos.all|slice:':4' %}
+              <div style="width:120px; margin:4px; text-align:center;">
+                <img src="{{ p.image.url }}" alt="photo" style="max-width:110px; max-height:110px; display:block; margin:0 auto;" />
+                <input type="text" name="legend{{ p.position }}" value="{{ p.legend }}" class="form-control form-control-sm mt-1" placeholder="Légende {{ p.position }}" />
+                <label style="font-size:11px;" class="mt-1"><input type="checkbox" name="delete_photo_{{ p.id }}" /> Supprimer</label>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+      <small class="form-text text-muted">Les photos seront ajoutées sur une deuxième page en damier (2x2).</small>
+    </div>
+  </div>
   <button type="submit" class="btn btn-primary">Enregistrer</button>
   {% if dn %}
     <a href="{% url 'courriers_by_dn' dn %}" class="btn btn-link">Annuler</a>
@@ -227,6 +266,7 @@
     const consDate = document.getElementById('cons_exam_date');
     const atreAccomp = document.getElementById('atre_accomp');
     const biopsyRow = document.getElementById('biopsy-options');
+  const photosRow = document.getElementById('photos-options');
     if (typeSel && corps) {
       typeSel.addEventListener('change', function(){
         const tp = this.value;
@@ -238,13 +278,15 @@
         // Affichage des options spécifiques au consentement
         if (consRow) consRow.style.display = (tp === 'CONS') ? '' : 'none';
         if (atreRow) atreRow.style.display = (tp === 'ATRE') ? '' : 'none';
-        if (biopsyRow) biopsyRow.style.display = (tp === 'FOGD' || tp === 'COLO') ? '' : 'none';
+  if (biopsyRow) biopsyRow.style.display = (tp === 'FOGD' || tp === 'COLO') ? '' : 'none';
+  if (photosRow) photosRow.style.display = (tp === 'FOGD' || tp === 'COLO' || tp === 'ECHO' || tp === 'SYN') ? '' : 'none';
       });
       // Réglage initial de la visibilité sans toucher au corps
       const initTp = typeSel.value;
       if (consRow) consRow.style.display = (initTp === 'CONS') ? '' : 'none';
       if (atreRow) atreRow.style.display = (initTp === 'ATRE') ? '' : 'none';
-      if (biopsyRow) biopsyRow.style.display = (initTp === 'FOGD' || initTp === 'COLO') ? '' : 'none';
+  if (biopsyRow) biopsyRow.style.display = (initTp === 'FOGD' || initTp === 'COLO') ? '' : 'none';
+  if (photosRow) photosRow.style.display = (initTp === 'FOGD' || initTp === 'COLO' || initTp === 'ECHO' || initTp === 'SYN') ? '' : 'none';
     }
 
     // Quand on modifie le type d'examen ou la date pour CONS, on régénère le corps
@@ -270,6 +312,9 @@
     }
     if (atreRow && typeSel?.value === 'ATRE') {
       atreRow.style.display = '';
+    }
+    if (photosRow && (typeSel?.value === 'FOGD' || typeSel?.value === 'COLO' || typeSel?.value === 'ECHO' || typeSel?.value === 'SYN')) {
+      photosRow.style.display = '';
     }
   })();
 </script>

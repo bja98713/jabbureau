@@ -23,15 +23,17 @@ td, th {
 
 /* Signature row with stamp */
 .signature-row {
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
+  text-align: right; /* align content to the right without flex */
   margin-top: 40px;
 }
 .signature-row .sig {
   font-weight: bold;
+  display: inline-block;
+  vertical-align: bottom;
 }
 .signature-row .stamp-box {
+  display: inline-block;
+  vertical-align: bottom;
   margin-left: 16px;
   border: 2px solid #1E5AA8; /* blue border for stamp effect */
   color: #1E5AA8; /* blue text */
@@ -40,7 +42,7 @@ td, th {
   line-height: 1.25;
   text-align: center;
   border-radius: 4px;
-  transform: rotate(-2deg);
+  /* avoid transforms that can be flaky in PDF engines */
 }
 .signature-row .stamp-box .strong {
   font-weight: 700;
@@ -70,4 +72,49 @@ td, th {
 /* Page margin reduction only for coloscopie (embedded as per template) */
 @page {
   margin: 14mm 12mm 14mm 12mm; /* slightly reduced default margins */
+}
+
+/* Photos grid on second page */
+.photo-page {
+  page-break-before: always;
+}
+.photo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 8mm;
+}
+.photo-grid .cell {
+  width: 100%;
+  height: 80mm; /* approx square area; adjust if needed */
+  border: 1px solid #999;
+  overflow: hidden;
+  display: table; /* stable vertical centering with WeasyPrint */
+}
+.photo-grid .cell .image-vcenter {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+  padding: 2mm;
+}
+.photo-grid .cell .image-vcenter img {
+  max-width: 100%;
+  max-height: 100%;
+  display: inline-block;
+  object-fit: contain;
+}
+.photo-grid .photo-item .legend {
+  margin-top: 2mm;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.25;
+  color: #222;
+  font-style: italic;
+  padding: 0 2mm;
+  word-break: break-word;
+}
+.photo-title {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 6mm;
 }

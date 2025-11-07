@@ -52,5 +52,23 @@
       Clinique Paofai
     </div>
   </div>
+
+  {% if courrier.photos.all %}
+  <div class="photo-page">
+    <div class="photo-title">Illustrations échographiques</div>
+    <div class="photo-grid">
+      {% for p in courrier.photos.all|slice:':4' %}
+        <div class="photo-item">
+          <div class="cell">
+            <div class="image-vcenter">
+              <img src="{{ p.image.url }}" alt="image {{ forloop.counter }}" />
+            </div>
+          </div>
+          {% if p.legend %}<div class="legend">{{ p.legend }}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 </body>
 </html>

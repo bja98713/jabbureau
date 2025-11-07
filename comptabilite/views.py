@@ -9,7 +9,6 @@ import tempfile
 import calendar
 from decimal import Decimal
 
-import openpyxl
 import pdfkit
 
 from django.conf import settings
@@ -42,10 +41,17 @@ from weasyprint import HTML, CSS
 import datetime as dt_module
 from datetime import datetime as dt, timedelta, date
 
+# ========== Optional Excel export dependency ==========
+try:
+    import openpyxl  # type: ignore
+    # Styles will be imported within functions when needed
+except Exception:  # ImportError or any environment issue
+    openpyxl = None  # type: ignore
+
 # ========== Local app imports ==========
 from .models import (
     Facturation, Code, Paiement,
-    PrevisionHospitalisation, Message, Observation, Patient, Courrier,
+    PrevisionHospitalisation, Message, Observation, Patient, Courrier, CourrierPhoto,
 )
 from .forms import FacturationForm, PrevisionHospitalisationForm, ObservationForm, PatientForm, CourrierForm
 
@@ -1039,7 +1045,8 @@ def patients_hospitalises_excel(request):
     hospitalises = PrevisionHospitalisation.objects.filter(
         date_entree__lte=today_local
     ).filter(Q(date_sortie__gte=today_local) | Q(date_sortie__isnull=True))
-
+    if openpyxl is None:
+        return HttpResponse("openpyxl non installé – export Excel indisponible.", status=500)
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Patients hospitalisés"
@@ -1685,9 +1692,26 @@ def courrier_create(request, dn: str):
                 "Certificat réalisé à la demande de l'intéressé(e) pour servir et remis pour faire valoir ce que de droit.\n\n"
                 f"Date : {today}\n\n"
             )
-    form = CourrierForm(request.POST or None, initial=initial)
+    form = CourrierForm(request.POST or None, request.FILES or None, initial=initial)
     if form.is_valid():
         c = form.save()
+        # Mettre à jour les légendes existantes par position (avant suppressions)
+        try:
+            for p in list(c.photos.all()[:4]):
+                new_leg = (request.POST.get(f'legend{p.position}') or '').strip()
+                if new_leg != p.legend:
+                    p.legend = new_leg
+                    p.save(update_fields=['legend'])
+        except Exception:
+            pass
+        # Photos upload (max 4) for eligible types
+        if c.type_courrier in ('FOGD', 'COLO', 'ECHO', 'SYN'):
+            for i in range(1,5):
+                f = request.FILES.get(f'photo{i}')
+                if f:
+                    from .models import CourrierPhoto
+                    legend = (request.POST.get(f'legend{i}') or '').strip()
+                    CourrierPhoto.objects.create(courrier=c, image=f, position=i, legend=legend)
         # Création éventuelle d'un rappel anapath si biopsie réalisée (FOGD/COLO)
         try:
             tp_courrier = c.type_courrier
@@ -1718,9 +1742,39 @@ def courrier_create(request, dn: str):
 @login_required
 def courrier_update(request, pk: int):
     c = get_object_or_404(Courrier, pk=pk)
-    form = CourrierForm(request.POST or None, instance=c)
+    form = CourrierForm(request.POST or None, request.FILES or None, instance=c)
     if form.is_valid():
         c = form.save()
+        # Mettre à jour les légendes existantes par position
+        for p in list(c.photos.all()[:4]):
+            new_leg = (request.POST.get(f'legend{p.position}') or '').strip()
+            if new_leg != p.legend:
+                p.legend = new_leg
+                p.save(update_fields=['legend'])
+        # Handle deletions
+        for photo in list(c.photos.all()):
+            if request.POST.get(f'delete_photo_{photo.id}'):
+                photo.delete()
+        # New uploads (replace vacant positions up to 4)
+        if c.type_courrier in ('FOGD', 'COLO', 'ECHO', 'SYN'):
+            existing_positions = {p.position for p in c.photos.all()}
+            next_pos = 1
+            for i in range(1,5):
+                f = request.FILES.get(f'photo{i}')
+                if f:
+                    # assign requested slot i if free else first free
+                    pos = i if i not in existing_positions else None
+                    if pos is None:
+                        # find first free
+                        for cand in range(1,5):
+                            if cand not in existing_positions:
+                                pos = cand
+                                break
+                    if pos and pos <=4:
+                        from .models import CourrierPhoto
+                        legend = (request.POST.get(f'legend{pos}') or '').strip()
+                        CourrierPhoto.objects.create(courrier=c, image=f, position=pos, legend=legend)
+                        existing_positions.add(pos)
         return redirect('courriers_by_dn', dn=c.dn)
     return render(request, 'comptabilite/courrier_form.html', {'form': form, 'mode': 'update', 'dn': c.dn, 'courrier': c})
 
@@ -1760,10 +1814,13 @@ def courrier_pdf(request, pk: int):
     elif c.type_courrier == 'ATRE':
         template_name = 'comptabilite/courrier_attestation_retour_pdf.html'
 
+    # Photos associées (max 4)
+    photos = list(c.photos.all()[:4])
     html_string = render_to_string(template_name, {
         'patient': patient,
         'courrier': c,
         'user': request.user,
+        'photos': photos,
     })
     css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
     pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
@@ -1833,10 +1890,12 @@ def courrier_send_email(request, pk: int):
         elif c.type_courrier == 'ATRE':
             template_name = 'comptabilite/courrier_attestation_retour_pdf.html'
 
+        photos = list(c.photos.all()[:4])
         html_string = render_to_string(template_name, {
             'patient': patient,
             'courrier': c,
             'user': request.user,
+            'photos': photos,
         })
         css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
         pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
@@ -1990,6 +2049,8 @@ def export_all_data_excel(request):
     Exporte toutes les données de facturation en format Excel
     avec les colonnes : date, nom, total, lieu, mois, annee, code_reel
     """
+    if openpyxl is None:
+        return HttpResponse("openpyxl non installé – export Excel indisponible.", status=500)
     # Créer un nouveau classeur Excel
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -2090,6 +2151,8 @@ def export_filtered_data_excel(request):
     date_fin = request.GET.get('date_fin')
     lieu_filtre = request.GET.get('lieu')
     
+    if openpyxl is None:
+        return HttpResponse("openpyxl non installé – export Excel indisponible.", status=500)
     # Créer un nouveau classeur Excel
     wb = openpyxl.Workbook()
     ws = wb.active

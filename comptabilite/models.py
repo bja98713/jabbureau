@@ -406,6 +406,24 @@ class Courrier(models.Model):
         return f"{self.type_label()} – {self.nom} {self.prenom} ({self.dn})"
 
 
+class CourrierPhoto(models.Model):
+    """Photo associée à un courrier (max 4 par courrier)."""
+    courrier = models.ForeignKey(Courrier, related_name='photos', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='courrier_photos/%Y/%m/%d')
+    position = models.PositiveSmallIntegerField(default=1, help_text="Ordre d'affichage (1-4)")
+    legend = models.CharField(max_length=120, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['position', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['courrier', 'position'], name='uniq_photo_position_par_courrier')
+        ]
+
+    def __str__(self):  # pragma: no cover
+        return f"Photo {self.position} du courrier {self.courrier_id}"
+
+
 # === Rappel Anapath (biopsies) après FOGD/COLO ===
 class BiopsyReminder(models.Model):
     EXAM_CHOICES = [

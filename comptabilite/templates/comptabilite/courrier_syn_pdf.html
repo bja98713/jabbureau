@@ -56,5 +56,23 @@
   <div class="footer-note" style="margin-top: 10px; font-size: 11px; color: #b00000;">
     Le cabinet se situe maintenant rue Lagarde, immeuble Air France, au 4e étage. Le n° de téléphone est 40.81.48.48. Il est possible de me contacter au 87.37.87.50, ou la secrétaire (Tania) au 87.34.53.72
   </div>
+
+  {% if courrier.photos.all %}
+  <div class="photo-page">
+    <div class="photo-title">Illustrations</div>
+    <div class="photo-grid">
+      {% for p in courrier.photos.all|slice:':4' %}
+        <div class="photo-item">
+          <div class="cell">
+            <div class="image-vcenter">
+              <img src="{{ p.image.url }}" alt="photo {{ forloop.counter }}" />
+            </div>
+          </div>
+          {% if p.legend %}<div class="legend">{{ p.legend }}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 </body>
 </html>

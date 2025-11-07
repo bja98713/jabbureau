@@ -96,6 +96,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # ✅ Dossiers à chercher en développement
 STATICFILES_DIRS = [ BASE_DIR / 'static' ]
 
+# Media (uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/accounts/login/'

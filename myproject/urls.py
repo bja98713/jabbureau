@@ -1,13 +1,15 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from django.views.generic import RedirectView
-from django.templatetags.static import static
+from django.templatetags.static import static as static_url
 from django.http import HttpResponseRedirect
 from django.contrib.auth import views as auth_views
 
 
 def _favicon_redirect(request):
-    return HttpResponseRedirect(static('images/favicon.svg'))
+    return HttpResponseRedirect(static_url('images/favicon.svg'))
 
 urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
@@ -23,3 +25,7 @@ urlpatterns = [
     path('apple-touch-icon.png', _favicon_redirect),
     path('apple-touch-icon-precomposed.png', _favicon_redirect),
 ]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
