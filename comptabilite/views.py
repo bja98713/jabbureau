@@ -1015,7 +1015,8 @@ def patients_hospitalises_pdf(request):
     html_string = render_to_string("comptabilite/patients_hospitalises_pdf.html", context)
     css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
 
-    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+    base_url = request.build_absolute_uri('/') if settings.DEBUG else f'file://{settings.BASE_DIR}/'
+    pdf = HTML(string=html_string, base_url=base_url).write_pdf(
         stylesheets=[CSS(filename=css_path)]
     )
 
@@ -1395,7 +1396,8 @@ def observations_send_email(request, dn: str):
             'user': request.user,
         })
         css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
-        pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        base_url = request.build_absolute_uri('/') if settings.DEBUG else f'file://{settings.BASE_DIR}/'
+        pdf_bytes = HTML(string=html_string, base_url=base_url).write_pdf(
             stylesheets=[CSS(filename=css_path)]
         )
 
@@ -1821,6 +1823,7 @@ def courrier_pdf(request, pk: int):
         'courrier': c,
         'user': request.user,
         'photos': photos,
+        'use_file_src': not settings.DEBUG,
     })
     css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
     pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
@@ -1896,6 +1899,7 @@ def courrier_send_email(request, pk: int):
             'courrier': c,
             'user': request.user,
             'photos': photos,
+            'use_file_src': not settings.DEBUG,
         })
         css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
         pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
