@@ -42,7 +42,11 @@ td, th {
   line-height: 1.25;
   text-align: center;
   border-radius: 4px;
-  /* avoid transforms that can be flaky in PDF engines */
+  /* Inclinaison du tampon */
+  transform: rotate(40deg);
+  -webkit-transform: rotate(40deg);
+  -ms-transform: rotate(40deg);
+  transform-origin: center center;
 }
 .signature-row .stamp-box .strong {
   font-weight: 700;
@@ -62,7 +66,7 @@ td, th {
 .colo-one-page .title { margin: 4px 0 8px 0; font-size: 13px; }
 .colo-one-page .content { line-height: 1.28; font-size: 11px; }
 .colo-one-page .signature-row { margin-top: 24px; }
-.colo-one-page .signature-row .stamp-box { padding: 4px 8px; font-size: 10px; line-height: 1.15; }
+.colo-one-page .signature-row .stamp-box { padding: 4px 8px; font-size: 10px; line-height: 1.15; transform: rotate(40deg); }
 .colo-one-page .signature-row .stamp-box .strong { font-size: 11px; }
 
 /* Prevent accidental page breaks within key blocks */
