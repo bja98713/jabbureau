@@ -1,4 +1,5 @@
 {% load static %}
+{% load image_extras %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -61,7 +62,13 @@
         <div class="photo-item">
           <div class="cell">
             <div class="image-vcenter">
-              <img src="{{ p.image.url }}" alt="photo {{ forloop.counter }}" />
+              {% if embed_images %}
+                <img src="{{ p.image|as_data_uri }}" alt="photo {{ forloop.counter }}" />
+              {% elif use_file_src %}
+                <img src="file://{{ p.image.path }}" alt="photo {{ forloop.counter }}" />
+              {% else %}
+                <img src="{{ p.image.url }}" alt="photo {{ forloop.counter }}" />
+              {% endif %}
             </div>
           </div>
           {% if p.legend %}<div class="legend">{{ p.legend }}</div>{% endif %}

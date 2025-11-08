@@ -1824,9 +1824,11 @@ def courrier_pdf(request, pk: int):
         'user': request.user,
         'photos': photos,
         'use_file_src': not settings.DEBUG,
+        'embed_images': not settings.DEBUG,
     })
     css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
-    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+    base_url = request.build_absolute_uri('/') if settings.DEBUG else f'file://{settings.BASE_DIR}/'
+    pdf = HTML(string=html_string, base_url=base_url).write_pdf(
         stylesheets=[CSS(filename=css_path)]
     )
     response = HttpResponse(pdf, content_type='application/pdf')
@@ -1900,9 +1902,11 @@ def courrier_send_email(request, pk: int):
             'user': request.user,
             'photos': photos,
             'use_file_src': not settings.DEBUG,
+            'embed_images': not settings.DEBUG,
         })
         css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
-        pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        base_url = request.build_absolute_uri('/') if settings.DEBUG else f'file://{settings.BASE_DIR}/'
+        pdf_bytes = HTML(string=html_string, base_url=base_url).write_pdf(
             stylesheets=[CSS(filename=css_path)]
         )
         email = EmailMessage(
