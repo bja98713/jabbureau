@@ -21,6 +21,13 @@
 </head>
 <body class="colo-one-page">
   <div class="header">
+    <div class="logo-left">
+      {% if embed_images %}
+        <img src="{{ logo_abs|as_data_uri }}" alt="Logo Paofai" />
+      {% else %}
+        <img src="{% static 'images/logo.png' %}" alt="Logo Paofai" />
+      {% endif %}
+    </div>
     <div class="clinic">CLINIQUE PAOFAI</div>
     <div class="addr">BP 40149 - 98713 - PAPEETE - TAHITI</div>
 

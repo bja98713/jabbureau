@@ -9,6 +9,23 @@ body {
   color: #000;
 }
 
+/* Header with logo on the left */
+.header {
+  position: relative;
+  min-height: 22mm;
+  /* Use flex to center textual block while keeping logo absolutely positioned */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.header .logo-left {
+  position: absolute;
+  left: 0;
+  top: 5mm; /* raised by 5mm as requested */
+  width: 30mm; /* slightly narrower to reduce lateral shift */
+}
+.header .logo-left img { width: 100%; height: auto; display: block; }
+
 table {
   width: 100%;
   border-collapse: collapse;

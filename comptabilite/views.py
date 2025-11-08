@@ -1818,6 +1818,7 @@ def courrier_pdf(request, pk: int):
 
     # Photos associées (max 4)
     photos = list(c.photos.all()[:4])
+    logo_abs = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
     html_string = render_to_string(template_name, {
         'patient': patient,
         'courrier': c,
@@ -1825,6 +1826,7 @@ def courrier_pdf(request, pk: int):
         'photos': photos,
         'use_file_src': not settings.DEBUG,
         'embed_images': not settings.DEBUG,
+        'logo_abs': logo_abs,
     })
     css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
     base_url = request.build_absolute_uri('/') if settings.DEBUG else f'file://{settings.BASE_DIR}/'
@@ -1896,6 +1898,7 @@ def courrier_send_email(request, pk: int):
             template_name = 'comptabilite/courrier_attestation_retour_pdf.html'
 
         photos = list(c.photos.all()[:4])
+        logo_abs = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
         html_string = render_to_string(template_name, {
             'patient': patient,
             'courrier': c,
@@ -1903,6 +1906,7 @@ def courrier_send_email(request, pk: int):
             'photos': photos,
             'use_file_src': not settings.DEBUG,
             'embed_images': not settings.DEBUG,
+            'logo_abs': logo_abs,
         })
         css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
         base_url = request.build_absolute_uri('/') if settings.DEBUG else f'file://{settings.BASE_DIR}/'
