@@ -29,6 +29,7 @@ from django.utils.timezone import localtime, now
 from django.utils.translation import activate
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.core.mail import EmailMessage
+from .utils import build_email
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -926,11 +927,10 @@ def prevision_send_email(request, pk):
         )
         pdf_file.seek(0)
 
-        # composition du mail
-        email = EmailMessage(
+        # composition du mail (centralisé)
+        email = build_email(
             subject=f"Prévision d’hospitalisation – {prevision.nom} {prevision.prenom} {prevision.date_naissance}",
             body="Bonjour,\n\nVeuillez trouver ci-joint la fiche de prévision d'hospitalisation.\n\nBien cordialement,\nDr. Bronstein",
-            from_email=settings.DEFAULT_FROM_EMAIL,
             to=destinataires,
         )
         email.attach(f"prevision_{prevision.pk}.pdf", pdf_file.read(), 'application/pdf')
@@ -1401,11 +1401,10 @@ def observations_send_email(request, dn: str):
             stylesheets=[CSS(filename=css_path)]
         )
 
-        email = EmailMessage(
+        email = build_email(
             subject=subject,
             body=body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=to_list or [request.user.email] if request.user.email else None,
+            to=to_list or ([request.user.email] if request.user.email else []),
         )
         # Ajout des destinataires en copie si fournis
         if cc_list:
@@ -1488,11 +1487,10 @@ def observation_send_email(request, pk: int):
         pdf_bytes = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
             stylesheets=[CSS(filename=css_path)]
         )
-        email = EmailMessage(
+        email = build_email(
             subject=subject,
             body=body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=to_list or [request.user.email] if getattr(request.user, 'email', '') else None,
+            to=to_list or ([request.user.email] if getattr(request.user, 'email', '') else []),
         )
         if cc_list:
             email.cc = cc_list
@@ -1913,11 +1911,10 @@ def courrier_send_email(request, pk: int):
         pdf_bytes = HTML(string=html_string, base_url=base_url).write_pdf(
             stylesheets=[CSS(filename=css_path)]
         )
-        email = EmailMessage(
+        email = build_email(
             subject=subject,
             body=body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=to_list or [request.user.email] if getattr(request.user, 'email', '') else None,
+            to=to_list or ([request.user.email] if getattr(request.user, 'email', '') else []),
         )
         if cc_list:
             email.cc = cc_list
