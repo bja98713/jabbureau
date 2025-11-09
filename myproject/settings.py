@@ -119,6 +119,26 @@ _default_from = f"Pr. Jean-Ariel Bronstein <{EMAIL_HOST_USER}>" if EMAIL_HOST_US
 DEFAULT_FROM_EMAIL  = os.getenv('DEFAULT_FROM_EMAIL', _default_from)
 SERVER_EMAIL        = os.getenv('SERVER_EMAIL', EMAIL_HOST_USER or 'server@example.com')
 
+"""Stratégie d'envoi des e‑mails.
+
+Si aucune identité SMTP n'est fournie (EMAIL_HOST_USER vide), on bascule
+automatiquement vers le backend console pour éviter les erreurs 530 (Authentication Required)
+et offrir une expérience de développement sans configuration préalable.
+
+Pour activer l'envoi réel : définir EMAIL_HOST_USER et EMAIL_HOST_PASSWORD
+dans le fichier .env puis redémarrer le serveur (sans --noreload) afin que
+les changements de settings soient bien pris en compte.
+"""
+
+# Repli automatique (DEV ou PROD) si identifiants manquants
+if not EMAIL_HOST_USER and EMAIL_BACKEND.endswith('smtp.EmailBackend'):
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    # Normaliser l'adresse From pour la lisibilité dans la console
+    if DEFAULT_FROM_EMAIL.endswith('<no-reply@example.com>'):
+        DEFAULT_FROM_EMAIL = 'Pr. Jean-Ariel Bronstein <docteur@bronstein.fr>'
+    # Petit avertissement visible dans la console au démarrage
+    print('[Email] Aucun identifiant SMTP détecté – bascule vers console.EmailBackend (aucun envoi réel).')
+
 # Réglages de sécurité appliqués seulement en production
 if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000

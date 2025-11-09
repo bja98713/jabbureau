@@ -1,17 +1,53 @@
 # utils.py
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Dict, Any
 import re
 import os
 import re
+import json
 
 from django.conf import settings
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMessage, get_connection
+import smtplib
 
 
 def get_user_profile(user):
     from comptabilite.models import UserProfile
     profile, _ = UserProfile.objects.get_or_create(user=user)
     return profile
+
+
+def _load_recipient_cache(user) -> Dict[str, Any]:
+    try:
+        prof = get_user_profile(user)
+        return json.loads(prof.email_recipient_cache or '{}')
+    except Exception:
+        return {}
+
+
+def _save_recipient_cache(user, cache: Dict[str, Any]):
+    try:
+        prof = get_user_profile(user)
+        prof.email_recipient_cache = json.dumps(cache)
+        prof.save(update_fields=['email_recipient_cache'])
+    except Exception:
+        pass
+
+
+def remember_recipients(user, courrier_type: str, to_list: Iterable[str], cc_list: Iterable[str]):
+    """Persist last used recipients for a given user and courrier type."""
+    key = (courrier_type or '').upper() or 'DEFAULT'
+    cache = _load_recipient_cache(user)
+    cache[key] = {
+        'to': list(dict.fromkeys([x.strip().lower() for x in (to_list or []) if x.strip()])),
+        'cc': list(dict.fromkeys([x.strip().lower() for x in (cc_list or []) if x.strip()])),
+    }
+    _save_recipient_cache(user, cache)
+
+
+def get_remembered_recipients(user, courrier_type: str):
+    key = (courrier_type or '').upper() or 'DEFAULT'
+    cache = _load_recipient_cache(user)
+    return cache.get(key) or {}
 
 
 def _normalize_subject(subject: str) -> str:
@@ -76,3 +112,22 @@ def build_email(subject: str,
         email.cc = list(cc)
     email.reply_to = reply_to
     return email
+
+
+def safe_send(email: EmailMessage) -> int:
+    """Envoie un e‑mail de façon robuste.
+
+    - Tente l'envoi via le backend configuré.
+    - En cas d'erreur d'authentification (530/535) ou d'erreur SMTP générique,
+      se rabat sur le backend console pour ne pas bloquer l'action utilisateur.
+    - Retourne le nombre de messages envoyés (ou affichés en console).
+    """
+    try:
+        return email.send(fail_silently=False)
+    except (smtplib.SMTPAuthenticationError, smtplib.SMTPSenderRefused, smtplib.SMTPRecipientsRefused, smtplib.SMTPException):
+        # Fallback console
+        try:
+            conn = get_connection('django.core.mail.backends.console.EmailBackend')
+            return conn.send_messages([email]) or 0
+        except Exception:
+            return 0

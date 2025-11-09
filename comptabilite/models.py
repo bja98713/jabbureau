@@ -555,6 +555,9 @@ from django.utils import timezone
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     last_seen = models.DateTimeField(default=timezone.now)
+    # Cache JSON (string) des derniers destinataires utilisés par type de courrier
+    # Format: {"FOGD": {"to": ["a@exemple.com"], "cc": ["b@exemple.com"]}, ...}
+    email_recipient_cache = models.TextField(blank=True, default='{}')
 
     def is_online(self):
         return timezone.now() - self.last_seen < timezone.timedelta(minutes=5)

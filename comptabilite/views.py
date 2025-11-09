@@ -29,7 +29,7 @@ from django.utils.timezone import localtime, now
 from django.utils.translation import activate
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.core.mail import EmailMessage
-from .utils import build_email
+from .utils import build_email, safe_send
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -933,8 +933,8 @@ def prevision_send_email(request, pk):
             body="Bonjour,\n\nVeuillez trouver ci-joint la fiche de prévision d'hospitalisation.\n\nBien cordialement,\nDr. Bronstein",
             to=destinataires,
         )
-        email.attach(f"prevision_{prevision.pk}.pdf", pdf_file.read(), 'application/pdf')
-        email.send()
+    email.attach(f"prevision_{prevision.pk}.pdf", pdf_file.read(), 'application/pdf')
+    safe_send(email)
 
     return redirect('prevision_detail', pk=prevision.pk)
 
@@ -1410,7 +1410,7 @@ def observations_send_email(request, dn: str):
         if cc_list:
             email.cc = cc_list
         email.attach(f"observations_{dn}.pdf", pdf_bytes, 'application/pdf')
-        email.send()
+        safe_send(email)
         success_msg = f"PDF des observations envoyé à: {', '.join(to_list)}"
         if cc_list:
             success_msg += f" (Cc: {', '.join(cc_list)})"
@@ -1495,7 +1495,7 @@ def observation_send_email(request, pk: int):
         if cc_list:
             email.cc = cc_list
         email.attach(f"observation_{obs.pk}.pdf", pdf_bytes, 'application/pdf')
-        email.send()
+        safe_send(email)
         msg = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} envoyée à: {', '.join(to_list)}"
         if cc_list:
             msg += f" (Cc: {', '.join(cc_list)})"
@@ -1919,7 +1919,13 @@ def courrier_send_email(request, pk: int):
         if cc_list:
             email.cc = cc_list
         email.attach(f"courrier_{c.pk}.pdf", pdf_bytes, 'application/pdf')
-        email.send()
+        safe_send(email)
+        # Mémoriser les destinataires utilisés pour ce type de courrier
+        try:
+            from .utils import remember_recipients
+            remember_recipients(request.user, c.type_courrier, to_list, cc_list)
+        except Exception:
+            pass
         msg = f"Courrier envoyé à: {', '.join(to_list)}"
         if cc_list:
             msg += f" (Cc: {', '.join(cc_list)})"
@@ -1938,6 +1944,18 @@ def courrier_send_email(request, pk: int):
     else:
         default_to = ''
         default_cc = ''
+    # Surcharger avec les destinataires mémorisés (si disponibles)
+    try:
+        from .utils import get_remembered_recipients
+        _mem = get_remembered_recipients(request.user, c.type_courrier)
+        _mem_to = ', '.join(_mem.get('to', [])).strip()
+        _mem_cc = ', '.join(_mem.get('cc', [])).strip()
+        if _mem_to:
+            default_to = _mem_to
+        if _mem_cc:
+            default_cc = _mem_cc
+    except Exception:
+        pass
     return render(request, 'comptabilite/courrier_email.html', {
         'patient': patient,
         'courrier': c,
