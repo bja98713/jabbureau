@@ -54,13 +54,16 @@ def build_email(subject: str,
     - Reply-To: 'docteur@bronstein.fr' (ou EMAIL_HOST_USER à défaut).
     - Headers: X-Mailer, Auto-Submitted.
     """
-    subj = _brand_subject(subject)
+    # Désactiver tout préfixe de marque pour réduire le risque de [SPAM]
+    subj = _normalize_subject(subject)
     # Utiliser strictement l'adresse authentifiée pour le From (meilleure délivrabilité)
     from_email = getattr(settings, 'EMAIL_HOST_USER', None) or getattr(settings, 'DEFAULT_FROM_EMAIL', None)
-    reply_to = [getattr(settings, 'EMAIL_HOST_USER', None) or getattr(settings, 'DEFAULT_REPLY_TO', None) or 'docteur@bronstein.fr']
+    # Forcer l'adresse de réponse vers docteur@bronstein.fr (ou DEFAULT_REPLY_TO si défini)
+    reply_to_addr = getattr(settings, 'DEFAULT_REPLY_TO', None) or 'docteur@bronstein.fr'
+    reply_to = [reply_to_addr]
 
     email = EmailMessage(
-        subject=_normalize_subject(subj),
+        subject=subj,
         body=body or "",
         from_email=from_email,
         to=list(to or []),
