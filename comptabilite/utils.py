@@ -1,6 +1,8 @@
 # utils.py
 from typing import Iterable, Optional
 import re
+import os
+import re
 
 from django.conf import settings
 from django.core.mail import EmailMessage
@@ -23,12 +25,21 @@ def _normalize_subject(subject: str) -> str:
 
 
 def _brand_subject(subject: str) -> str:
-    base = "Cabinet Dr Bronstein"
+    """Optionnellement préfixer le sujet par une marque.
+
+    Contrôlable via variables d'env:
+    - DISABLE_SUBJECT_BRAND=1 pour désactiver totalement le préfixe.
+    - EMAIL_BRAND_PREFIX="Texte" pour changer la marque (défaut: Cabinet Dr Bronstein).
+    """
+    disable = os.getenv('DISABLE_SUBJECT_BRAND', '').lower() in ('1','true','yes','on')
+    brand = os.getenv('EMAIL_BRAND_PREFIX', 'Cabinet Dr Bronstein').strip()
     s = _normalize_subject(subject)
-    # Évite de doubler le préfixe si déjà présent (insensible à la casse)
-    if s.lower().startswith(base.lower()):
+    if disable or not brand:
+        return s  # pas de marque
+    # Éviter double préfixe
+    if s.lower().startswith(brand.lower()):
         return s
-    return f"{base} – {s}" if s else base
+    return f"{brand} - {s}" if s else brand
 
 
 def build_email(subject: str,
