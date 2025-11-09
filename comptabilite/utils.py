@@ -31,7 +31,8 @@ def _brand_subject(subject: str) -> str:
     - DISABLE_SUBJECT_BRAND=1 pour désactiver totalement le préfixe.
     - EMAIL_BRAND_PREFIX="Texte" pour changer la marque (défaut: Cabinet Dr Bronstein).
     """
-    disable = os.getenv('DISABLE_SUBJECT_BRAND', '').lower() in ('1','true','yes','on')
+    # Par défaut on désactive le préfixe de marque pour réduire le risque de marquage [SPAM]
+    disable = os.getenv('DISABLE_SUBJECT_BRAND', '1').lower() in ('1','true','yes','on')
     brand = os.getenv('EMAIL_BRAND_PREFIX', 'Cabinet Dr Bronstein').strip()
     s = _normalize_subject(subject)
     if disable or not brand:

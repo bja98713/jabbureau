@@ -12,3 +12,8 @@ __pycache__/
 # macOS metadata files
 .DS_Store
 **/.DS_Store
+
+# Project artifacts to ignore
+media/
+backups/
+static/images/logo_old.png

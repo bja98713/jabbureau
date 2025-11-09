@@ -1367,14 +1367,14 @@ def observations_send_email(request, dn: str):
     if request.method == 'POST':
         to = (request.POST.get('to') or '').strip()
         cc = (request.POST.get('cc') or '').strip()
-        subject = (request.POST.get('subject') or '').strip() or f"Observations – {patient.nom} {patient.prenom} (DN {dn})"
+        subject = (request.POST.get('subject') or '').strip() or f"Observations - {patient.nom} {patient.prenom}"
         body = (request.POST.get('body') or '').strip() or "Bonjour,\n\nVeuillez trouver ci-joint le PDF des observations.\n\nBien cordialement,\nDr. Bronstein"
         to_list = [addr.strip() for addr in to.replace(';', ',').split(',') if addr.strip()]
         cc_list = [addr.strip() for addr in cc.replace(';', ',').split(',') if addr.strip()]
 
         if not to_list:
             messages.error(request, "Veuillez renseigner au moins un destinataire.")
-            default_subject = f"Observations – {patient.nom} {patient.prenom} (DN {dn})"
+            default_subject = f"Observations - {patient.nom} {patient.prenom}"
             default_body = "Bonjour,\n\nVeuillez trouver ci-joint le PDF des observations.\n\nBien cordialement,\nDr. Bronstein"
             # Par défaut, on met le secrétariat en Cc et non en To, en évitant les doublons
             _cands = [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']
@@ -1456,14 +1456,14 @@ def observation_send_email(request, pk: int):
     if request.method == 'POST':
         to = (request.POST.get('to') or '').strip()
         cc = (request.POST.get('cc') or '').strip()
-        subject = (request.POST.get('subject') or '').strip() or f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+        subject = (request.POST.get('subject') or '').strip() or f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} - {patient.nom} {patient.prenom}"
         body = (request.POST.get('body') or '').strip() or "Bonjour,\n\nVeuillez trouver ci-joint l'observation.\n\nBien cordialement,\nDr. Bronstein"
         to_list = [a.strip() for a in to.replace(';', ',').split(',') if a.strip()]
         cc_list = [a.strip() for a in cc.replace(';', ',').split(',') if a.strip()]
 
         if not to_list:
             messages.error(request, "Veuillez renseigner au moins un destinataire.")
-            default_subject = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+            default_subject = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} - {patient.nom} {patient.prenom}"
             default_body = "Bonjour,\n\nVeuillez trouver ci-joint l'observation.\n\nBien cordialement,\nDr. Bronstein"
             _cands = [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']
             _cands = [x for x in _cands if x]
@@ -1503,7 +1503,7 @@ def observation_send_email(request, pk: int):
         return redirect('observations_by_dn', dn=patient.dn)
 
     # GET: formulaire par défaut
-    default_subject = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+    default_subject = f"Observation du {obs.date_observation.strftime('%d/%m/%Y')} - {patient.nom} {patient.prenom}"
     default_body = "Bonjour,\n\nVeuillez trouver ci-joint l'observation.\n\nBien cordialement,\nDr. Bronstein"
     _cands = [request.user.email if getattr(request.user, 'email', '') else None, 'docteur@bronstein.fr']
     _cands = [x for x in _cands if x]
@@ -1851,14 +1851,14 @@ def courrier_send_email(request, pk: int):
     if request.method == 'POST':
         to = (request.POST.get('to') or '').strip()
         cc = (request.POST.get('cc') or '').strip()
-        subject = (request.POST.get('subject') or '').strip() or f"{type_label} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+        subject = (request.POST.get('subject') or '').strip() or f"{type_label} - {patient.nom} {patient.prenom}"
         body = (request.POST.get('body') or '').strip() or "Bonjour,\n\nVeuillez trouver ci-joint le courrier.\n\nBien cordialement,\nDr. Bronstein"
         to_list = [a.strip() for a in to.replace(';', ',').split(',') if a.strip()]
         cc_list = [a.strip() for a in cc.replace(';', ',').split(',') if a.strip()]
 
         if not to_list:
             messages.error(request, "Veuillez renseigner au moins un destinataire.")
-            default_subject = f"{type_label} – {date_str} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+            default_subject = f"{type_label} - {date_str} - {patient.nom} {patient.prenom}"
             default_body = "Bonjour,\n\nVeuillez trouver ci-joint le courrier.\n\nBien cordialement,\nDr. Bronstein"
             # Destinataires par défaut selon type
             if c.type_courrier in ('FOGD', 'COLO', 'ECHO', 'CONS'):
@@ -1926,7 +1926,7 @@ def courrier_send_email(request, pk: int):
         messages.success(request, msg)
         return redirect('courriers_by_dn', dn=patient.dn)
 
-    default_subject = f"{type_label} – {date_str} – {patient.nom} {patient.prenom} (DN {patient.dn})"
+    default_subject = f"{type_label} - {date_str} - {patient.nom} {patient.prenom}"
     default_body = "Bonjour,\n\nVeuillez trouver ci-joint le courrier.\n\nBien cordialement,\nDr. Bronstein"
     # Définir les destinataires par défaut selon le type
     if c.type_courrier in ('FOGD', 'COLO', 'ECHO', 'CONS', 'ATRE'):
