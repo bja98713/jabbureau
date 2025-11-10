@@ -84,10 +84,11 @@ class FacturationSearchListView(LoginRequiredMixin, ListView):
     model = Facturation
     template_name = 'comptabilite/facturation_search_list.html'
     context_object_name = 'facturations'
+    paginate_by = 50
 
     def get_queryset(self):
         import re
-        qs = super().get_queryset()
+        qs = super().get_queryset().select_related('code_acte').order_by('-date_acte', '-id')
 
         q = (self.request.GET.get('q') or '').strip()
         if q:
@@ -149,7 +150,7 @@ class FacturationSearchListView(LoginRequiredMixin, ListView):
             last_of_month  = date(today.year, today.month, monthrange(today.year, today.month)[1])
             qs = qs.filter(date_acte__gte=first_of_month, date_acte__lte=last_of_month)
 
-        return qs.order_by('-date_acte')
+        return qs
 
 
 class FacturationListView(LoginRequiredMixin, ListView):
@@ -158,9 +159,10 @@ class FacturationListView(LoginRequiredMixin, ListView):
     model = Facturation
     template_name = 'comptabilite/facturation_list.html'
     context_object_name = 'facturations'
+    paginate_by = 50
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = super().get_queryset().select_related('code_acte').order_by('-date_acte', '-id')
         # Si on a coché la case “today” dans le GET, on ne garde que les factures du jour
         if self.request.GET.get('today'):
             today = timezone.localdate()
