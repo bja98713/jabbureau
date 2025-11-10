@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Créer{% endif %} une fiche{% endblock %}
+{% block content %}
+<nav aria-label="Fil d'Ariane" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'bibliographie_list' %}">Bibliographie</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% if form.instance.pk %}Modifier{% else %}Créer{% endif %}</li>
+  </ol>
+</nav>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="card-title">{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %} fiche</h2>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        {% if form.instance.pk or field.name != 'resume' and field.name != 'lien' %}
+          <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+              <small class="form-text text-muted">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+      <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        <a class="btn btn-link" href="{% url 'bibliographie_list' %}">Annuler</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Bibliographie{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Bibliographie</h2>
+  <a class="btn btn-primary" href="{% url 'bibliographie_create' %}">Nouvelle fiche</a>
+</div>
+<form method="get" class="form-inline mb-3" role="search">
+  <input type="text" name="q" class="form-control mr-2" placeholder="Rechercher un titre ou un code" value="{{ q }}">
+  <button type="submit" class="btn btn-secondary">Rechercher</button>
+  {% if q %}
+    <a class="btn btn-link" href="{% url 'bibliographie_list' %}">Réinitialiser</a>
+  {% endif %}
+</form>
+{% if bibliographies %}
+  <div class="table-responsive bg-white border rounded">
+    <table class="table table-striped mb-0">
+      <thead class="thead-light">
+        <tr>
+          <th scope="col">Titre</th>
+          <th scope="col">Référence</th>
+          <th scope="col">Codes CIM-10</th>
+          <th scope="col" class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in bibliographies %}
+          <tr>
+            <td><a href="{% url 'bibliographie_detail' entry.pk %}">{{ entry.titre }}</a></td>
+            <td>{{ entry.reference|default:'—' }}</td>
+            <td>{{ entry.codes_list|join:', '|default:'—' }}</td>
+            <td class="text-right">
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'bibliographie_detail' entry.pk %}">Voir</a>
+              <a class="btn btn-sm btn-outline-info" href="{% url 'bibliographie_pdf' entry.pk %}" target="_blank" rel="noopener">PDF</a>
+              <form method="post" action="{% url 'bibliographie_send_email' entry.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-warning">Envoyer</button>
+              </form>
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'bibliographie_update' entry.pk %}">Modifier</a>
+              <a class="btn btn-sm btn-outline-danger" href="{% url 'bibliographie_delete' entry.pk %}">Supprimer</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="alert alert-info mb-0">Aucune fiche trouvée.</div>
+{% endif %}
+{% endblock %}

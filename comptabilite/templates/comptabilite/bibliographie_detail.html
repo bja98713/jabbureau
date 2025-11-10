@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}{{ bibliographie.titre }}{% endblock %}
+{% block content %}
+<nav aria-label="Fil d'Ariane" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'bibliographie_list' %}">Bibliographie</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ bibliographie.titre }}</li>
+  </ol>
+</nav>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="card-title">{{ bibliographie.titre }}</h2>
+    {% if bibliographie.reference %}
+      <p class="text-muted mb-1"><strong>Référence:</strong> {{ bibliographie.reference }}</p>
+    {% endif %}
+    {% if bibliographie.lien %}
+      <p class="mb-1"><strong>Lien:</strong> <a href="{{ bibliographie.lien }}" target="_blank" rel="noopener">{{ bibliographie.lien }}</a></p>
+    {% endif %}
+    {% with codes=bibliographie.codes_list %}
+      {% if codes %}
+        <p class="mb-3"><strong>Codes CIM-10:</strong> {{ codes|join:', ' }}</p>
+      {% endif %}
+    {% endwith %}
+    {% if bibliographie.resume %}
+      <h5>Résumé</h5>
+      <p>{{ bibliographie.resume|linebreaks }}</p>
+    {% endif %}
+    {% if bibliographie.texte %}
+      <h5>Texte complet</h5>
+      <p>{{ bibliographie.texte|linebreaks }}</p>
+    {% endif %}
+    <div class="mt-4">
+      <a class="btn btn-info" href="{% url 'bibliographie_pdf' bibliographie.pk %}" target="_blank" rel="noopener">Ouvrir en PDF</a>
+      <form method="post" action="{% url 'bibliographie_send_email' bibliographie.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-warning">Envoyer par e-mail</button>
+      </form>
+      <a class="btn btn-secondary" href="{% url 'bibliographie_update' bibliographie.pk %}">Modifier</a>
+      <a class="btn btn-danger" href="{% url 'bibliographie_delete' bibliographie.pk %}">Supprimer</a>
+      <a class="btn btn-link" href="{% url 'bibliographie_list' %}">Retour à la liste</a>
+    </div>
+  </div>
+  <div class="card-footer text-muted">
+    Créé le {{ bibliographie.created_at|date:'d/m/Y H:i' }} • Mis à jour le {{ bibliographie.updated_at|date:'d/m/Y H:i' }}
+  </div>
+</div>
+{% endblock %}

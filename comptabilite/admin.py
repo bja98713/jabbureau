@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BiopsyReminder, CourrierPhoto
+from .models import BiopsyReminder, CourrierPhoto, Bibliographie
 
 
 @admin.register(BiopsyReminder)
@@ -12,6 +12,13 @@ class CourrierPhotoAdmin(admin.ModelAdmin):
     list_display = ("id", "courrier", "position", "uploaded_at")
     list_filter = ("position", "uploaded_at")
     search_fields = ("courrier__dn", "courrier__nom", "courrier__prenom")
+
+
+@admin.register(Bibliographie)
+class BibliographieAdmin(admin.ModelAdmin):
+    list_display = ("titre", "reference", "codes_cim10", "updated_at")
+    search_fields = ("titre", "reference", "codes_cim10")
+    list_filter = ("updated_at",)
 from .models import Code, Medecin, Message, Patient
 from .models import ParametrageFacturation
 

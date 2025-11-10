@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>{{ bibliographie.titre }}</title>
+<style>
+@page { size: A4; margin: 1.4cm 1.8cm; }
+body { font-family: sans-serif; font-size: 12px; margin: 0; color: #111; hyphens: auto; }
+.letterhead {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 11px;
+  line-height: 1.25;
+}
+.letterhead .name { font-weight: bold; font-size: 12px; }
+.content {
+  margin: 120px 0 0 0;
+  padding: 24px 28px;
+  line-height: 1.32;
+  border: 1px solid #999;
+  border-radius: 8px;
+  background: #fff;
+}
+.content h1 {
+  font-size: 18px;
+  margin: 0 0 12px 0;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+.meta {
+  text-align: center;
+  font-size: 10px;
+  color: #555;
+  margin-bottom: 18px;
+  line-height: 1.35;
+}
+.section-title {
+  font-weight: bold;
+  font-size: 12px;
+  margin: 16px 0 8px 0;
+  text-transform: uppercase;
+}
+.rich-text {
+  text-align: justify;
+  font-size: 12px;
+}
+.rich-text p {
+  margin: 0 0 6px 0;
+  text-align: justify;
+}
+.rich-text br {
+  display: block;
+  margin-bottom: 6px;
+  content: "";
+}
+.truncate-note {
+  font-size: 9px;
+  color: #aa0000;
+  text-align: right;
+  margin-top: 4px;
+}
+.footer {
+  margin-top: 24px;
+  font-size: 9px;
+  color: #666;
+  text-align: right;
+}
+</style>
+</head>
+<body>
+<div class="letterhead">
+  <div class="name">Clinique Paofai</div>
+  <div class="name">Dr Jean-Ariel Bronstein</div>
+  <div>Professeur agrégé du Val-de-Grâce</div>
+  <div>Gastro-entérologie et Oncologie digestive</div>
+</div>
+<div class="content">
+  <h1>{{ bibliographie.titre }}</h1>
+  {% if bibliographie.reference or bibliographie.codes_list or bibliographie.lien %}
+    <div class="meta">
+      {% if bibliographie.reference %}<div><strong>Référence :</strong> {{ bibliographie.reference }}</div>{% endif %}
+      {% if bibliographie.lien %}<div><strong>Lien :</strong> {{ bibliographie.lien }}</div>{% endif %}
+      {% with codes=bibliographie.codes_list %}
+        {% if codes %}<div><strong>Codes CIM-10 :</strong> {{ codes|join:', ' }}</div>{% endif %}
+      {% endwith %}
+    </div>
+  {% endif %}
+  {% if resume_pdf %}
+    <div class="section-title">Résumé</div>
+    <div class="rich-text">{{ resume_pdf|linebreaks }}</div>
+    {% if resume_truncated %}
+      <div class="truncate-note">Résumé abrégé pour respecter la limite de deux pages.</div>
+    {% endif %}
+  {% endif %}
+  {% if texte_pdf %}
+    <div class="section-title">Texte complet</div>
+    <div class="rich-text">{{ texte_pdf|linebreaks }}</div>
+    {% if texte_truncated %}
+      <div class="truncate-note">Texte abrégé pour respecter la limite de deux pages.</div>
+    {% endif %}
+  {% endif %}
+  <div class="footer">
+    Dernière mise à jour : {{ bibliographie.updated_at|date:'d/m/Y H:i' }}
+    {% if content_truncated %}<br>Le contenu complet est disponible dans l'application.{% endif %}
+  </div>
+</div>
+</body>
+</html>

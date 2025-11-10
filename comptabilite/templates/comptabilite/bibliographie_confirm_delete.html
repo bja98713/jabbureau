@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Supprimer la fiche{% endblock %}
+{% block content %}
+<nav aria-label="Fil d'Ariane" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'bibliographie_list' %}">Bibliographie</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Supprimer</li>
+  </ol>
+</nav>
+<div class="card border-danger">
+  <div class="card-body">
+    <h2 class="card-title text-danger">Confirmer la suppression</h2>
+    <p>Voulez-vous vraiment supprimer la fiche <strong>{{ object.titre }}</strong> ? Cette action est irréversible.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+      <a class="btn btn-secondary" href="{% url 'bibliographie_detail' object.pk %}">Annuler</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

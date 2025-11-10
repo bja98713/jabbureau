@@ -66,6 +66,14 @@ urlpatterns = [
     path('patients/<str:dn>/', views.patients_detail, name='patients_detail'),
     path('patients/<str:dn>/edit/', views.patient_update, name='patient_update'),
     path('patients/<str:dn>/delete/', views.patient_delete, name='patient_delete'),
+    # Bibliographie
+    path('bibliographie/', views.BibliographieListView.as_view(), name='bibliographie_list'),
+    path('bibliographie/nouveau/', views.BibliographieCreateView.as_view(), name='bibliographie_create'),
+    path('bibliographie/<int:pk>/', views.BibliographieDetailView.as_view(), name='bibliographie_detail'),
+    path('bibliographie/<int:pk>/pdf/', views.bibliographie_pdf, name='bibliographie_pdf'),
+    path('bibliographie/<int:pk>/email/', views.bibliographie_send_email, name='bibliographie_send_email'),
+    path('bibliographie/<int:pk>/modifier/', views.BibliographieUpdateView.as_view(), name='bibliographie_update'),
+    path('bibliographie/<int:pk>/supprimer/', views.BibliographieDeleteView.as_view(), name='bibliographie_delete'),
     # Observations
     path('observations/', views.observations_patient_list, name='observations_patient_list'),
     path('observations/new/', views.observation_create, name='observation_create'),

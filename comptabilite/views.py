@@ -28,6 +28,7 @@ from django.utils.formats import date_format
 from django.utils.timezone import localtime, now
 from django.utils.translation import activate
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+from django.views.decorators.http import require_POST
 from django.core.mail import EmailMessage
 from .utils import build_email, safe_send
 
@@ -52,9 +53,11 @@ except Exception:  # ImportError or any environment issue
 # ========== Local app imports ==========
 from .models import (
     Facturation, Code, Paiement,
-    PrevisionHospitalisation, Message, Observation, Patient, Courrier, CourrierPhoto,
+    PrevisionHospitalisation, Message, Observation, Patient, Courrier, CourrierPhoto, Bibliographie,
 )
-from .forms import FacturationForm, PrevisionHospitalisationForm, ObservationForm, PatientForm, CourrierForm
+from .forms import FacturationForm, PrevisionHospitalisationForm, ObservationForm, PatientForm, CourrierForm, BibliographieForm
+from django.utils.html import strip_tags
+from django.utils.text import Truncator
 
 
 # ========== Utilities ==========
@@ -1117,6 +1120,156 @@ def imprimer_fiche_facturation(request, pk):
 
     c.save()
     return response
+
+
+# ========== Bibliographie (CRUD) ==========
+
+
+class BibliographieListView(LoginRequiredMixin, ListView):
+    login_url = 'login'
+    redirect_field_name = 'next'
+    model = Bibliographie
+    template_name = 'comptabilite/bibliographie_list.html'
+    context_object_name = 'bibliographies'
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = (self.request.GET.get('q') or '').strip()
+        if q:
+            qs = qs.filter(Q(titre__icontains=q) | Q(codes_cim10__icontains=q))
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['q'] = (self.request.GET.get('q') or '').strip()
+        return ctx
+
+
+class BibliographieDetailView(LoginRequiredMixin, DetailView):
+    login_url = 'login'
+    redirect_field_name = 'next'
+    model = Bibliographie
+    template_name = 'comptabilite/bibliographie_detail.html'
+    context_object_name = 'bibliographie'
+
+
+class BibliographieCreateView(LoginRequiredMixin, CreateView):
+    login_url = 'login'
+    redirect_field_name = 'next'
+    model = Bibliographie
+    form_class = BibliographieForm
+    template_name = 'comptabilite/bibliographie_form.html'
+    success_url = reverse_lazy('bibliographie_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, "Fiche bibliographique créée.")
+        return response
+
+
+class BibliographieUpdateView(LoginRequiredMixin, UpdateView):
+    login_url = 'login'
+    redirect_field_name = 'next'
+    model = Bibliographie
+    form_class = BibliographieForm
+    template_name = 'comptabilite/bibliographie_form.html'
+    success_url = reverse_lazy('bibliographie_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, "Fiche bibliographique mise à jour.")
+        return response
+
+
+class BibliographieDeleteView(LoginRequiredMixin, DeleteView):
+    login_url = 'login'
+    redirect_field_name = 'next'
+    model = Bibliographie
+    template_name = 'comptabilite/bibliographie_confirm_delete.html'
+    success_url = reverse_lazy('bibliographie_list')
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, "Fiche bibliographique supprimée.")
+        return super().delete(request, *args, **kwargs)
+
+
+@login_required
+def bibliographie_pdf(request, pk: int):
+    entry = get_object_or_404(Bibliographie, pk=pk)
+    pdf_bytes, _ = _render_bibliographie_pdf(entry, request)
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="bibliographie_{entry.pk}.pdf"'
+    return response
+
+
+def _render_bibliographie_pdf(entry: Bibliographie, request) -> tuple[bytes, dict]:
+    resume_original = entry.resume or ""
+    texte_original = entry.texte or ""
+
+    max_resume_chars = 2000
+    max_texte_chars = 5000
+
+    def _truncate(raw: str, limit: int) -> tuple[str, bool]:
+        if not raw:
+            return "", False
+        clean = strip_tags(raw)
+        if len(clean) <= limit:
+            return raw, False
+        truncated = Truncator(clean).chars(limit, html=False)
+        return truncated, True
+
+    resume_pdf, resume_was_truncated = _truncate(resume_original, max_resume_chars)
+    texte_pdf, texte_was_truncated = _truncate(texte_original, max_texte_chars)
+
+    truncated_flag = resume_was_truncated or texte_was_truncated
+
+    context = {
+        'bibliographie': entry,
+        'resume_pdf': resume_pdf,
+        'texte_pdf': texte_pdf,
+        'resume_truncated': resume_was_truncated,
+        'texte_truncated': texte_was_truncated,
+        'content_truncated': truncated_flag,
+        'user': request.user,
+    }
+
+    html_string = render_to_string('comptabilite/bibliographie_pdf.html', context)
+    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+    base_url = request.build_absolute_uri('/') if settings.DEBUG else f'file://{settings.BASE_DIR}/'
+    pdf_bytes = HTML(string=html_string, base_url=base_url).write_pdf(
+        stylesheets=[CSS(filename=css_path)]
+    )
+    return pdf_bytes, context
+
+
+@login_required
+@require_POST
+def bibliographie_send_email(request, pk: int):
+    entry = get_object_or_404(Bibliographie, pk=pk)
+    pdf_bytes, _ = _render_bibliographie_pdf(entry, request)
+
+    subject = entry.titre
+    to_addresses = ['docteur@bronstein.fr']
+    cc_addresses = ['francois.nathan.bronstein@gmail.com']
+
+    body = (
+        "Bonjour,\n\n"
+        "Veuillez trouver ci-joint la fiche bibliographique.\n\n"
+        "Bien cordialement,\nDr. Bronstein"
+    )
+
+    email = build_email(subject=subject, body=body, to=to_addresses)
+    email.cc = cc_addresses
+    email.reply_to = ['docteur@bronstein.fr']  # garantie du Reply-To explicite
+    email.attach(
+        f"bibliographie_{entry.pk}.pdf",
+        pdf_bytes,
+        'application/pdf'
+    )
+
+    safe_send(email)
+    messages.success(request, "Fiche bibliographique envoyée par e-mail.")
+    return redirect('bibliographie_detail', pk=entry.pk)
 
 
 # ========== Observations médicales (liste patients, CRUD, PDF) ==========

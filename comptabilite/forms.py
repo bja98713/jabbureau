@@ -1,13 +1,15 @@
+import re
+
 from django import forms
 from django.utils import timezone
-from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient, Courrier
+from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient, Courrier, Bibliographie
 from .widgets import IntegerNumberInput, CodeSelectWidget
 
 ### forms.py (extrait corrigé avec incrémentation fiable)
 
 from django import forms
 from django.utils import timezone
-from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient
+from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient, Bibliographie
 from .widgets import IntegerNumberInput, CodeSelectWidget
 
 class FacturationForm(forms.ModelForm):
@@ -208,6 +210,35 @@ class ObservationForm(forms.ModelForm):
                 cleaned['date_naissance'] = fact.date_naissance
             # Sinon, DN inconnu : on laisse la saisie utilisateur telle quelle
         return cleaned
+
+
+class BibliographieForm(forms.ModelForm):
+    codes_cim10 = forms.CharField(
+        required=False,
+        label="Codes CIM-10",
+        help_text="Séparez les codes par une virgule ou un espace.",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'K52, A09'})
+    )
+
+    class Meta:
+        model = Bibliographie
+        fields = ['titre', 'resume', 'texte', 'reference', 'lien', 'codes_cim10']
+        widgets = {
+            'titre': forms.TextInput(attrs={'class': 'form-control'}),
+            'reference': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Liste des sources, articles, ouvrages…'}),
+            'resume': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'texte': forms.Textarea(attrs={'class': 'form-control', 'rows': 8}),
+            'lien': forms.URLInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'reference': 'Références bibliographiques',
+        }
+
+    def clean_codes_cim10(self):
+        raw = self.cleaned_data.get('codes_cim10', '') or ''
+        parts = [p.strip().upper() for p in re.split(r"[;,\s]+", raw) if p.strip()]
+        return ", ".join(sorted(dict.fromkeys(parts)))
+
 
 
 # ===== Patients =====

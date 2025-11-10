@@ -1,3 +1,5 @@
+import re
+
 from django.db import models, transaction
 
 class Medecin(models.Model):
@@ -349,6 +351,36 @@ class Observation(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.dn} - {self.date_observation} - {self.motif_consultation[:30]}"
+
+
+class Bibliographie(models.Model):
+    """Fiche de bibliographie médicale indexée par codes CIM-10."""
+
+    titre = models.CharField(max_length=200, unique=True, verbose_name="Titre")
+    reference = models.CharField(max_length=255, blank=True, verbose_name="Référence")
+    resume = models.TextField(blank=True, verbose_name="Résumé")
+    texte = models.TextField(blank=True, verbose_name="Texte complet")
+    lien = models.URLField(blank=True, verbose_name="Lien externe")
+    codes_cim10 = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Codes CIM-10",
+        help_text="Séparez les codes par une virgule ou un espace."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["titre"]
+        verbose_name = "Bibliographie"
+        verbose_name_plural = "Bibliographies"
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.titre
+
+    def codes_list(self):
+        raw = self.codes_cim10 or ""
+        return [code.strip().upper() for code in re.split(r"[;,\s]+", raw) if code.strip()]
 
 
 # === Table Patient (référentiel central par DN) ===
