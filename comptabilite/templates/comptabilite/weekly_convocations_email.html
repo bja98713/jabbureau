@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Convocations – semaine {{ week_number }}</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #222; }
+    h1 { color: #2c3e50; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th, td { border: 1px solid #dcdcdc; padding: 6px 8px; font-size: 14px; }
+    th { background: #f2f2f2; text-align: left; }
+    tr.highlight td { font-weight: 700; background: #fdf5d4; }
+    h2 { margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <h1>Liste des patients à convoquer – semaine {{ week_number }} (courriel envoyé le {{ today|date:"d/m/Y" }})</h1>
+  {% if total %}
+    {% for section in entries %}
+      {% if section.highlight %}
+        <h2><strong>Année {{ section.year }}</strong></h2>
+      {% else %}
+        <h2>Année {{ section.year }}</h2>
+      {% endif %}
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>DN</th>
+            <th>Date examen</th>
+            <th>Acte</th>
+            <th>Téléphone</th>
+            <th>Date de naissance</th>
+            <th>Âge</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for patient in section.patients %}
+            <tr{% if patient.highlight %} class="highlight"{% endif %}>
+              <td>{{ patient.nom }}</td>
+              <td>{{ patient.prenom }}</td>
+              <td>{{ patient.dn|default:"N/A" }}</td>
+              <td>{{ patient.exam_date|date:"d/m/Y" }}</td>
+              <td>{{ patient.acte }}</td>
+              <td>{{ patient.telephone }}</td>
+              <td>{{ patient.date_naissance|date:"d/m/Y" }}</td>
+              <td>{{ patient.age }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endfor %}
+    <p><strong>Total : {{ total }} patient{% if total > 1 %}s{% endif %}</strong></p>
+  {% else %}
+    <p>Aucun patient à contacter pour cette semaine.</p>
+  {% endif %}
+</body>
+</html>

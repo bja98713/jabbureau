@@ -1,0 +1,13 @@
+Convocations – semaine {{ week_number }} ({{ today|date:"d/m/Y" }})
+
+{% if total %}
+{% for year, patients in entries %}
+Année {{ year }}
+{% for patient in patients %}
+- {{ patient.nom|default:"" }} {{ patient.prenom|default:"" }} (DN {{ patient.dn|default:"N/A" }}) – Examen le {{ patient.exam_date|date:"d/m/Y" }} – Acte : {{ patient.acte|default:"" }} – Téléphone : {{ patient.telephone }} – Âge : {{ patient.age }} ans
+{% endfor %}
+{% endfor %}
+Total : {{ total }} patient{% if total > 1 %}s{% endif %}
+{% else %}
+Aucun patient à contacter pour cette semaine.
+{% endif %}
