@@ -2,14 +2,23 @@ import re
 
 from django import forms
 from django.utils import timezone
-from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient, Courrier, Bibliographie
+from .models import (
+    Facturation,
+    Paiement,
+    ParametrageFacturation,
+    Observation,
+    Patient,
+    Courrier,
+    Bibliographie,
+    CorrespondantEmail,
+)
 from .widgets import IntegerNumberInput, CodeSelectWidget
 
 ### forms.py (extrait corrigé avec incrémentation fiable)
 
 from django import forms
 from django.utils import timezone
-from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient, Bibliographie
+from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient, Bibliographie, CorrespondantEmail
 from .widgets import IntegerNumberInput, CodeSelectWidget
 
 class FacturationForm(forms.ModelForm):
@@ -250,4 +259,15 @@ class PatientForm(forms.ModelForm):
             'nom': forms.TextInput(attrs={'class': 'form-control'}),
             'prenom': forms.TextInput(attrs={'class': 'form-control'}),
             'date_naissance': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
+        }
+
+
+class CorrespondantEmailForm(forms.ModelForm):
+    class Meta:
+        model = CorrespondantEmail
+        fields = ['name', 'email', 'notes']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom ou structure'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'adresse@example.com'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Informations complémentaires (optionnel)'}),
         }

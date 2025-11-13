@@ -383,6 +383,27 @@ class Bibliographie(models.Model):
         return [code.strip().upper() for code in re.split(r"[;,\s]+", raw) if code.strip()]
 
 
+class CorrespondantEmail(models.Model):
+    name = models.CharField(max_length=255, verbose_name="Nom")
+    email = models.EmailField(max_length=255, verbose_name="Adresse e-mail")
+    notes = models.TextField(blank=True, verbose_name="Notes internes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name", "email"]
+        unique_together = ("name", "email")
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["email"]),
+        ]
+        verbose_name = "Correspondant"
+        verbose_name_plural = "Correspondants"
+
+    def __str__(self):  # pragma: no cover
+        return f"{self.name} <{self.email}>"
+
+
 # === Table Patient (référentiel central par DN) ===
 class Patient(models.Model):
     dn = models.CharField(max_length=7, unique=True, db_index=True, verbose_name="DN")

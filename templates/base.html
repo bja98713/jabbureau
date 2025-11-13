@@ -40,6 +40,7 @@
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'comptabilite_summary' %}">Comptabilité</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'prevision_list' %}">Prévisions d'hospitalisation</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'fiches_information' %}">Fiches d'information</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="{% url 'correspondants_list' %}">Correspondants</a></li>
         
           {% if request.user.username == "bronstein" %}
   <li><a class="nav-link text-white chat-open" href="{% url 'chat_view' 3 %}">💬 Chat avec Tania</a></li>

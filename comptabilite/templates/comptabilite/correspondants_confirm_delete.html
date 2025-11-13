@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Supprimer correspondant{% endblock %}
+{% block content %}
+<h2 class="mb-3">Supprimer le correspondant</h2>
+<p>Confirmez-vous la suppression de <strong>{{ correspondant.name }}</strong> (<a href="mailto:{{ correspondant.email }}">{{ correspondant.email }}</a>) ?</p>
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger">Supprimer</button>
+  <a href="{% url 'correspondants_list' %}" class="btn btn-secondary">Annuler</a>
+</form>
+{% endblock %}

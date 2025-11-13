@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{% if correspondant %}Modifier{% else %}Nouveau{% endif %} correspondant{% endblock %}
+{% block content %}
+<h2 class="mb-4">{% if correspondant %}Modifier{% else %}Ajouter{% endif %} un correspondant</h2>
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="form-group">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+      {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+  {% endfor %}
+  <button type="submit" class="btn btn-primary">Enregistrer</button>
+  <a href="{% url 'correspondants_list' %}" class="btn btn-link">Annuler</a>
+</form>
+{% endblock %}

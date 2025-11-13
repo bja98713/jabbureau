@@ -18,6 +18,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q, Sum, Count
+from django.core.paginator import Paginator
 from django.forms.widgets import NumberInput
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -54,8 +55,17 @@ except Exception:  # ImportError or any environment issue
 from .models import (
     Facturation, Code, Paiement,
     PrevisionHospitalisation, Message, Observation, Patient, Courrier, CourrierPhoto, Bibliographie,
+    CorrespondantEmail,
 )
-from .forms import FacturationForm, PrevisionHospitalisationForm, ObservationForm, PatientForm, CourrierForm, BibliographieForm
+from .forms import (
+    FacturationForm,
+    PrevisionHospitalisationForm,
+    ObservationForm,
+    PatientForm,
+    CourrierForm,
+    BibliographieForm,
+    CorrespondantEmailForm,
+)
 from django.utils.html import strip_tags
 from django.utils.text import Truncator
 
@@ -2223,6 +2233,66 @@ def patient_delete(request, dn: str):
         patient.delete()
         return redirect('patients_list')
     return render(request, 'comptabilite/patient_confirm_delete.html', {'patient': patient})
+
+
+@login_required
+def correspondants_list(request):
+    """Liste et recherche des correspondants e-mail."""
+    q = (request.GET.get('q') or '').strip()
+    qs = CorrespondantEmail.objects.all()
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q) |
+            Q(email__icontains=q) |
+            Q(notes__icontains=q)
+        )
+    qs = qs.order_by('name', 'email')
+    paginator = Paginator(qs, 60)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(request, 'comptabilite/correspondants_list.html', {
+        'page_obj': page_obj,
+        'correspondants': page_obj.object_list,
+        'q': q,
+    })
+
+
+@login_required
+def correspondant_create(request):
+    form = CorrespondantEmailForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Correspondant ajouté avec succès.")
+        return redirect('correspondants_list')
+    return render(request, 'comptabilite/correspondants_form.html', {
+        'form': form,
+        'correspondant': None,
+    })
+
+
+@login_required
+def correspondant_update(request, pk: int):
+    correspondant = get_object_or_404(CorrespondantEmail, pk=pk)
+    form = CorrespondantEmailForm(request.POST or None, instance=correspondant)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Correspondant mis à jour.")
+        return redirect('correspondants_list')
+    return render(request, 'comptabilite/correspondants_form.html', {
+        'form': form,
+        'correspondant': correspondant,
+    })
+
+
+@login_required
+def correspondant_delete(request, pk: int):
+    correspondant = get_object_or_404(CorrespondantEmail, pk=pk)
+    if request.method == 'POST':
+        correspondant.delete()
+        messages.success(request, "Correspondant supprimé.")
+        return redirect('correspondants_list')
+    return render(request, 'comptabilite/correspondants_confirm_delete.html', {
+        'correspondant': correspondant,
+    })
 
 
 @login_required
