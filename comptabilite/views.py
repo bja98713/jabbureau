@@ -1729,7 +1729,7 @@ def courrier_create(request, dn: str):
                 "- Muqueuse œsophagienne normale sur toute sa longueur\n"
                 "- Ligne Z : 40 cm des arcades dentaires\n\n"
                 "Cardia : Cardia anatomique à 40 cm des arcades dentaires\n\n"
-                "Fundus : \n\n"
+                "Fundus : Normal\n\n"
                 "Antre : Normal\n\n"
                 "Pylore : Normal\n\n"
                 "Bulbe : Normal\n\n"
