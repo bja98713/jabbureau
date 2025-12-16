@@ -38,7 +38,6 @@
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'activity_list' %}">Activité</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'cheque_listing' %}">Chèques</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'comptabilite_summary' %}">Comptabilité</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'prevision_list' %}">Prévisions d'hospitalisation</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'fiches_information' %}">Fiches d'information</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'correspondants_list' %}">Correspondants</a></li>
         
@@ -47,7 +46,6 @@
 {% elif request.user.username == "Tania" %}
   <li><a class="nav-link text-white chat-open" href="{% url 'chat_view' 1 %}">💬 Chat avec Taote</a></li>
 {% endif %}
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'patients_hospitalises' %}">Hospitalisés</a></li>
           <li class="nav-item">
             <a class="nav-link text-white" href="javascript:void(0)" onclick="ouvrirLienAuHasard()">Oh, What a Dream !</a>
           </li>

@@ -103,12 +103,14 @@ class FacturationSearchListView(LoginRequiredMixin, ListView):
         q = (self.request.GET.get('q') or '').strip()
         if q:
             # Recherche texte habituelle
+            q_upper = q.upper()
             text_q = (
                 Q(dn__icontains=q) |
                 Q(nom__icontains=q) |
                 Q(prenom__icontains=q) |
                 Q(numero_facture__icontains=q) |
-                Q(code_acte__code_acte__icontains=q)
+                Q(code_acte__code_acte__icontains=q) |
+                Q(statut_dossier__iexact=q_upper)
             )
 
             # Recherche date intelligente
@@ -173,10 +175,17 @@ class FacturationListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('code_acte').order_by('-date_acte', '-id')
-        # Si on a coché la case “today” dans le GET, on ne garde que les factures du jour
+        today = timezone.localdate()
         if self.request.GET.get('today'):
-            today = timezone.localdate()
             qs = qs.filter(date_acte=today)
+        if self.request.GET.get('week'):
+            start_of_week = today - timedelta(days=today.weekday())
+            end_of_week = start_of_week + timedelta(days=6)
+            qs = qs.filter(date_acte__gte=start_of_week, date_acte__lte=end_of_week)
+        if self.request.GET.get('month'):
+            first_of_month = today.replace(day=1)
+            last_of_month = date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+            qs = qs.filter(date_acte__gte=first_of_month, date_acte__lte=last_of_month)
         return qs
 
 
@@ -373,6 +382,7 @@ def create_bordereau(request):
     factures = (
         Facturation.objects
         .filter(tiers_payant__gt=0)
+        .filter(statut_dossier='RAS')
         .filter(Q(numero_bordereau__isnull=True) | Q(numero_bordereau=""))
         .order_by('numero_facture')
     )
@@ -409,6 +419,7 @@ def print_bordereau(request, num_bordereau):
     # 1) QuerySet initial
     qs = (Facturation.objects
           .filter(tiers_payant__gt=0)
+            .filter(statut_dossier='RAS')
           .filter(Q(numero_bordereau__isnull=True) | Q(numero_bordereau=""))
           .order_by('numero_facture'))
 
@@ -420,7 +431,7 @@ def print_bordereau(request, num_bordereau):
 
     # 3) Totaux
     count = len(factures_list)
-    total_tiers = sum(f.tiers_payant for f in factures_list)
+    total_tiers = sum((f.tiers_payant or Decimal('0')) for f in factures_list)
 
     # 4) Mise à jour en base
     today_local = date.today()
@@ -2149,9 +2160,15 @@ def patients_list(request):
             filt |= Q(date_naissance=d)
         qs = qs.filter(filt)
     qs = qs.order_by('nom', 'prenom')
+    paginator = Paginator(qs, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     return render(request, 'comptabilite/patient_list.html', {
-        'patients': qs,
+        'patients': page_obj,
         'q': q,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
     })
 
 

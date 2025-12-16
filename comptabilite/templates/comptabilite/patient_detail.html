@@ -19,7 +19,7 @@
     {% endif %}
     <div class="mt-3">
       <a class="btn btn-primary" href="{% url 'observation_create_for_dn' patient.dn %}">Nouvelle observation</a>
-      <a class="btn btn-success" href="{% url 'facturation_create' %}?dn={{ patient.dn|urlencode }}&nom={{ patient.nom|urlencode }}&prenom={{ patient.prenom|urlencode }}&date_naissance={{ patient.date_naissance|date:'Y-m-d'|urlencode }}">Nouvelle facture</a>
+      <a class="btn btn-success" href="{% url 'facturation_create' %}?dn={{ patient.dn|urlencode }}&nom={{ patient.nom|urlencode }}&prenom={{ patient.prenom|urlencode }}&date_naissance={{ patient.date_naissance|date:'Y-m-d'|urlencode }}" target="_blank">Nouvelle facture</a>
       <a class="btn btn-outline-primary" href="{% url 'courriers_by_dn' patient.dn %}">Courriers</a>
       <div class="btn-group">
         <a class="btn btn-outline-primary" href="{% url 'courrier_create_for_dn' patient.dn %}">Nouveau courrier</a>
@@ -78,6 +78,7 @@
         <th>Total</th>
         <th>Payé</th>
         <th>TP</th>
+        <th>Statut</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -90,6 +91,13 @@
         <td>{{ f.total_acte|default_if_none:"" }}</td>
         <td>{{ f.total_paye|default_if_none:"" }}</td>
         <td>{{ f.tiers_payant|default_if_none:"" }}</td>
+        <td>
+          {% if f.statut_dossier == 'RAS' %}
+            <span class="text-success">{{ f.get_statut_dossier_display|default:"RAS" }}</span>
+          {% else %}
+            <span class="text-danger">{{ f.get_statut_dossier_display|default:"—" }}</span>
+          {% endif %}
+        </td>
         <td>
           <a class="btn btn-sm btn-outline-primary" href="{% url 'facturation_detail' f.pk %}">Voir</a>
           <a class="btn btn-sm btn-outline-secondary" href="{% url 'imprimer_fiche_facturation' f.pk %}">PDF</a>
