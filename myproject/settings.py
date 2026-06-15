@@ -55,10 +55,10 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.request',          # nécessaire pour l’admin et pour avoir request dans vos templates
-                'django.contrib.auth.context_processors.auth',         # nécessaire pour admin + {{ user }} dans vos templates
-                'django.contrib.messages.context_processors.messages', # nécessaire pour admin + le framework de messages
-                # … conservez ici les autres que vous aviez déjà, par ex. debug, i18n, static, etc.
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'myproject.context_processors.app_version',
             ],
         },
     },

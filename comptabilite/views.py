@@ -930,14 +930,6 @@ def prevision_pdf(request, pk):
 def prevision_send_email(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
 
-    # chemins vers logo et CSS
-    logo_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
-    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
-
-    # rendu HTML
-    template = get_template('comptabilite/prevision_detail.html')
-    html_content = template.render({'prevision': prevision, 'logo_path': logo_path})
-
     # ✅ destinataires selon le lieu d’hospitalisation
     if prevision.lieu_hospitalisation == "Médecine":
         destinataires = [
@@ -955,12 +947,22 @@ def prevision_send_email(request, pk):
             "docteur@bronstein.fr"
         ]
 
-    # génération du PDF
+    # GET → page de confirmation avant envoi
+    if request.method != 'POST':
+        return render(request, 'comptabilite/prevision_email_confirm.html', {
+            'prevision': prevision,
+            'destinataires': destinataires,
+        })
+
+    # POST → envoi réel
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
+    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'pdf_styles.css')
+    template = get_template('comptabilite/prevision_detail.html')
+    html_content = template.render({'prevision': prevision, 'logo_path': logo_path})
+
     pdf_bytes = HTML(string=html_content, base_url=request.build_absolute_uri()).write_pdf(
         stylesheets=[CSS(filename=css_path)]
     )
-
-    # composition du mail (centralisé)
     email = build_email(
         subject=f"Prévision d’hospitalisation – {prevision.nom} {prevision.prenom} {prevision.date_naissance}",
         body="Bonjour,\n\nVeuillez trouver ci-joint la fiche de prévision d'hospitalisation.\n\nBien cordialement,\nDr. Bronstein",
@@ -969,7 +971,13 @@ def prevision_send_email(request, pk):
     email.attach(f"prevision_{prevision.pk}.pdf", pdf_bytes, 'application/pdf')
     safe_send(email)
 
+    messages.success(request, f"✅ Email envoyé à {len(destinataires)} destinataire(s) : {', '.join(destinataires)}")
     return redirect('prevision_detail', pk=prevision.pk)
+
+
+    messages.success(request, f"✅ Email envoyé à {len(destinataires)} destinataire(s) : {', '.join(destinataires)}")
+    return redirect('prevision_detail', pk=prevision.pk)
+
 
 
 @login_required
