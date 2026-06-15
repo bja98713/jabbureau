@@ -27,13 +27,20 @@ from django.utils import timezone
 from comptabilite.models import UserProfile
 
 class UpdateLastSeenMiddleware:
+    THROTTLE_SECONDS = 300  # mise à jour au maximum toutes les 5 minutes
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         if request.user.is_authenticated:
-            profile, _ = UserProfile.objects.get_or_create(user=request.user)
-            profile.last_seen = timezone.now()
-            profile.save(update_fields=['last_seen'])
+            now = timezone.now()
+            session_key = '_last_seen_ts'
+            last_ts = request.session.get(session_key)
+            if last_ts is None or (now.timestamp() - last_ts) >= self.THROTTLE_SECONDS:
+                profile, _ = UserProfile.objects.get_or_create(user=request.user)
+                profile.last_seen = now
+                profile.save(update_fields=['last_seen'])
+                request.session[session_key] = now.timestamp()
         return self.get_response(request)
 

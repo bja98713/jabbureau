@@ -956,19 +956,17 @@ def prevision_send_email(request, pk):
         ]
 
     # génération du PDF
-    with tempfile.NamedTemporaryFile(delete=True, suffix=".pdf") as pdf_file:
-        HTML(string=html_content, base_url=request.build_absolute_uri()).write_pdf(
-            pdf_file.name, stylesheets=[CSS(filename=css_path)]
-        )
-        pdf_file.seek(0)
+    pdf_bytes = HTML(string=html_content, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(filename=css_path)]
+    )
 
-        # composition du mail (centralisé)
-        email = build_email(
-            subject=f"Prévision d’hospitalisation – {prevision.nom} {prevision.prenom} {prevision.date_naissance}",
-            body="Bonjour,\n\nVeuillez trouver ci-joint la fiche de prévision d'hospitalisation.\n\nBien cordialement,\nDr. Bronstein",
-            to=destinataires,
-        )
-    email.attach(f"prevision_{prevision.pk}.pdf", pdf_file.read(), 'application/pdf')
+    # composition du mail (centralisé)
+    email = build_email(
+        subject=f"Prévision d’hospitalisation – {prevision.nom} {prevision.prenom} {prevision.date_naissance}",
+        body="Bonjour,\n\nVeuillez trouver ci-joint la fiche de prévision d'hospitalisation.\n\nBien cordialement,\nDr. Bronstein",
+        to=destinataires,
+    )
+    email.attach(f"prevision_{prevision.pk}.pdf", pdf_bytes, 'application/pdf')
     safe_send(email)
 
     return redirect('prevision_detail', pk=prevision.pk)
