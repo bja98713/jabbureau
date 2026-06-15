@@ -258,6 +258,7 @@ class FacturationDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'facturation'
 
 
+@login_required
 def check_dn(request):
     dn = request.GET.get('dn')
     if dn:
@@ -275,6 +276,7 @@ def check_dn(request):
     return JsonResponse({'exists': False})
 
 
+@login_required
 def check_acte(request):
     code_value = request.GET.get('code')
     if code_value:
@@ -292,6 +294,7 @@ def check_acte(request):
     return JsonResponse({'exists': False})
 
 
+@login_required
 def print_facture(request, pk):
     facture = get_object_or_404(Facturation, pk=pk)
     response = HttpResponse(content_type='application/pdf')
@@ -716,6 +719,7 @@ def print_cheque_listing(request):
 
 # ========== Numéro facture util ==========
 
+@login_required
 def generate_numero(request, pk):
     """
     Génère et sauvegarde un numero_facture pour la Facturation pk
@@ -872,6 +876,7 @@ class ComptabiliteSummaryView(LoginRequiredMixin, ListView):
 
 # ========== Prévisions d’hospitalisation (CRUD + PDF + Email) ==========
 
+@login_required
 def prevision_list(request):
     previsions = PrevisionHospitalisation.objects.all().order_by('-date_entree')
     today_local = localtime().date()
@@ -882,6 +887,7 @@ def prevision_list(request):
     })
 
 
+@login_required
 def prevision_create(request):
     form = PrevisionHospitalisationForm(request.POST or None)
     if form.is_valid():
@@ -890,11 +896,13 @@ def prevision_create(request):
     return render(request, 'comptabilite/prevision_form.html', {'form': form})
 
 
+@login_required
 def prevision_detail(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
     return render(request, 'comptabilite/prevision_detail.html', {'prevision': prevision})
 
 
+@login_required
 def prevision_pdf(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
     template = get_template('comptabilite/prevision_detail.html')
@@ -918,6 +926,7 @@ def prevision_pdf(request, pk):
         return response
 
 
+@login_required
 def prevision_send_email(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
 
@@ -965,6 +974,7 @@ def prevision_send_email(request, pk):
     return redirect('prevision_detail', pk=prevision.pk)
 
 
+@login_required
 def prevision_update(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
     form = PrevisionHospitalisationForm(request.POST or None, instance=prevision)
@@ -974,6 +984,7 @@ def prevision_update(request, pk):
     return render(request, 'comptabilite/prevision_form.html', {'form': form})
 
 
+@login_required
 def prevision_delete(request, pk):
     prevision = get_object_or_404(PrevisionHospitalisation, pk=pk)
     if request.method == 'POST':
@@ -1013,16 +1024,23 @@ def get_messages(request):
 
 
 @login_required
+@require_POST
 def send_message(request):
-    if request.method == 'POST':
-        content = request.POST.get('content')
-        receiver_id = request.POST.get('receiver_id')
-        Message.objects.create(
-            sender=request.user,
-            receiver_id=receiver_id,
-            content=content
-        )
-        return JsonResponse({'status': 'ok'})
+    content = (request.POST.get('content') or '').strip()
+    receiver_id = request.POST.get('receiver_id')
+    if not content:
+        return JsonResponse({'status': 'error', 'message': 'Contenu vide'}, status=400)
+    try:
+        receiver_id = int(receiver_id)
+    except (TypeError, ValueError):
+        return JsonResponse({'status': 'error', 'message': 'Destinataire invalide'}, status=400)
+    get_object_or_404(User, pk=receiver_id)
+    Message.objects.create(
+        sender=request.user,
+        receiver_id=receiver_id,
+        content=content
+    )
+    return JsonResponse({'status': 'ok'})
 
 
 # ========== Patients hospitalisés (liste / PDF / Excel) ==========
