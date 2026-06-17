@@ -1,10 +1,10 @@
 # comptabilite/management/commands/send_biopsy_reminders.py
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from django.conf import settings
-from django.core.mail import EmailMessage
 
 from comptabilite.models import BiopsyReminder
+from comptabilite.utils import build_email, safe_send
+
 
 class Command(BaseCommand):
     help = "Envoie les rappels d'anapath à récupérer pour les biopsies FOGD/COLO arrivées à échéance."
@@ -17,9 +17,9 @@ class Command(BaseCommand):
             return
 
         sent_count = 0
+        errors = 0
         for r in due.order_by('send_on'):
             try:
-                # Construire sujet et corps selon le cahier des charges
                 dest_label = r.destination_label()
                 dna_str = r.date_naissance.strftime('%d/%m/%Y') if r.date_naissance else 'XX/XX/XXXX'
                 subject = (
@@ -27,26 +27,29 @@ class Command(BaseCommand):
                 )
                 body = (
                     "Tania,\n\n"
-                    f"Il ne faut pas oublier de récuperer l'anap-path de {r.nom} {r.prenom} {dna_str}, N°DN {r.dn}, envoyée à ({dest_label}).\n"
+                    f"Il ne faut pas oublier de récuperer l'anap-path de {r.nom} {r.prenom} {dna_str}, "
+                    f"N°DN {r.dn}, envoyée à ({dest_label}).\n"
                 )
-                to = ['secretariat@bronstein.fr']
-                cc = ['docteur@bronstein.fr']
 
-                email = EmailMessage(
+                email = build_email(
                     subject=subject,
                     body=body,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=to,
-                    cc=cc,
+                    to=['secretariat@bronstein.fr'],
+                    cc=['docteur@bronstein.fr'],
                 )
-                email.send(fail_silently=False)
+                safe_send(email)
 
                 r.sent = True
                 r.sent_at = timezone.now()
                 r.save(update_fields=['sent', 'sent_at'])
                 sent_count += 1
+                self.stdout.write(f"  ✓ Rappel envoyé : {r.nom} {r.prenom} ({r.dn})")
             except Exception as e:
-                self.stderr.write(f"Erreur envoi rappel pour {r.dn} – {r.nom} {r.prenom}: {e}")
+                errors += 1
+                self.stderr.write(f"  ✗ Erreur pour {r.dn} – {r.nom} {r.prenom} : {e}")
                 continue
 
-        self.stdout.write(self.style.SUCCESS(f"{sent_count} rappel(s) anapath envoyé(s)."))
+        self.stdout.write(self.style.SUCCESS(
+            f"{sent_count} rappel(s) anapath envoyé(s)."
+            + (f" {errors} erreur(s)." if errors else "")
+        ))
