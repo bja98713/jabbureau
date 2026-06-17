@@ -26,9 +26,15 @@ class Command(BaseCommand):
                     f"Ana-Path à recuperer de {r.nom} {r.prenom} {dna_str} envoyée à \"{dest_label}\""
                 )
                 body = (
-                    "Tania,\n\n"
-                    f"Il ne faut pas oublier de récuperer l'anap-path de {r.nom} {r.prenom} {dna_str}, "
-                    f"N°DN {r.dn}, envoyée à ({dest_label}).\n"
+                    "<p>Tania,</p>"
+                    f"<p>Il ne faut pas oublier de recuperer l'anap-path de "
+                    f"<strong>{r.nom} {r.prenom} {dna_str}</strong>, "
+                    f"N°DN <strong>{r.dn}</strong>, envoyee a ({dest_label}).</p>"
+                    "<p><strong>Acces service d'anapath :</strong><br>"
+                    "<a href=\"https://cyberlab.icpf.pf/cyberlab/Login.jsp\" target=\"_blank\">"
+                    "https://cyberlab.icpf.pf/cyberlab/Login.jsp</a><br>"
+                    "Login : <strong>M3089</strong><br>"
+                    "Mot de passe : <strong>Papeete98713</strong></p>"
                 )
 
                 email = build_email(
@@ -37,6 +43,7 @@ class Command(BaseCommand):
                     to=['secretariat@bronstein.fr'],
                     cc=['docteur@bronstein.fr'],
                 )
+                email.content_subtype = 'html'
                 safe_send(email)
 
                 r.sent = True

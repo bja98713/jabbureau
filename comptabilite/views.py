@@ -1921,7 +1921,7 @@ def courrier_create(request, dn: str):
                 dest = (request.POST.get('biopsie_destination') or '').upper()
                 if dest in dict(BiopsyReminder.DEST_CHOICES):
                     exam_date = _tz.localdate()
-                    send_on = exam_date + _tz.timedelta(days=28)
+                    send_on = exam_date + _tz.timedelta(days=21)
                     BiopsyReminder.objects.create(
                         dn=c.dn,
                         nom=c.nom,
