@@ -485,7 +485,7 @@ class BiopsyReminder(models.Model):
     ]
     DEST_CHOICES = [
         ('CERBA', 'CERBA - France'),
-        ('CHT', 'Service anatomo-pathologie - CHT'),
+        ('CHT', "service d'anatomo-pathologie - ICPF"),
     ]
 
     dn = models.CharField(max_length=7, db_index=True, verbose_name="DN")
