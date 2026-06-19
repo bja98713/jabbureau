@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .dashboard-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+    }
+    .dashboard-card.primary { border-left-color: #0d6efd; }
+    .dashboard-card.success { border-left-color: #198754; }
+    .dashboard-card.info { border-left-color: #0dcaf0; }
+    .dashboard-card.warning { border-left-color: #ffc107; }
+    .dashboard-card.danger { border-left-color: #dc3545; }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    .stat-label {
+        font-size: 0.85rem;
+        text-muted;
+    }
+    .alert-inline {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4 mb-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h1>📊 Tableau de Bord</h1>
+            <p class="text-muted">{{ today|date:"l d F Y"|capfirst }}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'facturation_list' %}" class="btn btn-outline-secondary">
+                ← Retour aux actes
+            </a>
+        </div>
+    </div>
+
+    <!-- ===== RÉSUMÉ DU JOUR ===== -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card dashboard-card primary">
+                <div class="card-body">
+                    <div class="stat-label">📋 ACTES DU JOUR</div>
+                    <div class="stat-number">{{ actes_jour }}</div>
+                    <small class="text-muted">
+                        {% if actes_hier >= actes_jour %}
+                            ↓ {{ actes_hier }} hier
+                        {% else %}
+                            ↑ {{ actes_hier }} hier
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card dashboard-card success">
+                <div class="card-body">
+                    <div class="stat-label">💰 MONTANT DU JOUR</div>
+                    <div class="stat-number">{{ montant_jour|default:"0" }}</div>
+                    <small class="text-muted">XPF</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card dashboard-card info">
+                <div class="card-body">
+                    <div class="stat-label">🏥 HOSPITALISATIONS</div>
+                    <div class="stat-number">{{ hospitalisations }}</div>
+                    <small class="text-muted">En cours/planifiées</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card dashboard-card {% if anapath_urgents > 0 %}danger{% else %}warning{% endif %}">
+                <div class="card-body">
+                    <div class="stat-label">⚠️ ANAPATH EN ATTENTE</div>
+                    <div class="stat-number">{{ anapath_attente }}</div>
+                    <small class="text-muted">
+                        {% if anapath_urgents > 0 %}
+                            {{ anapath_urgents }} URGENT!
+                        {% else %}
+                            Rappels
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== GRAPHIQUE ACTIVITÉ 30 JOURS ===== -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📈 Activité (30 derniers jours)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="activityChart" height="80"></canvas>
+                    <p class="text-muted text-center mt-3 small">
+                        Nombre d'actes facturés par jour
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PROCHAINS RDV ET ALERTES ===== -->
+    <div class="row mb-4">
+        <div class="col-lg-6 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">⏰ Prochains Rendez-vous (7 jours)</h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% if prochains %}
+                        <div class="list-group list-group-flush">
+                            {% for prev in prochains %}
+                                <a href="{% url 'prevision_detail' prev.pk %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">
+                                            <strong>{{ prev.date_entree|date:"d/m à H:i"|default:prev.date_bloc|date:"d/m" }}</strong>
+                                        </h6>
+                                    </div>
+                                    <p class="mb-1">
+                                        <i class="fas fa-hospital"></i>
+                                        {{ prev.motif_hospitalisation|truncatewords:5 }}
+                                    </p>
+                                    <small class="text-muted">
+                                        DN {{ prev.dn }} - {{ prev.nom }} {{ prev.prenom|truncatewords:1 }}
+                                    </small>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">
+                            <i class="fas fa-check-circle text-success"></i><br>
+                            Aucun RDV prévu pour les 7 prochains jours
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">⚠️ Alertes et À Faire</h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% if anapath_urgents > 0 %}
+                        <div class="alert alert-danger alert-inline mb-3">
+                            <strong>🔴 {{ anapath_urgents }} RAPPELS ANAPATH URGENTS</strong>
+                            <br>
+                            <small>Dépassés depuis plus de 30 jours — Action immédiate requise</small>
+                            <br>
+                            <a href="{% url 'admin:comptabilite_biopsyreminder_changelist' %}" class="btn btn-sm btn-danger mt-2">
+                                Voir la liste
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if anapath_attente > 0 and anapath_urgents == 0 %}
+                        <div class="alert alert-warning alert-inline mb-3">
+                            <strong>⚠️ {{ anapath_attente }} rappel(s) en attente</strong>
+                            <br>
+                            <small>Seront envoyés selon le calendrier</small>
+                        </div>
+                    {% endif %}
+
+                    {% if actes_jour == 0 %}
+                        <div class="alert alert-info alert-inline mb-3">
+                            <strong>ℹ️ Aucun acte le {{ today|date:"d/m/Y" }}</strong>
+                            <br>
+                            <a href="{% url 'facturation_create' %}" class="btn btn-sm btn-primary mt-2">
+                                Créer une facturation
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if hospitalisations > 0 %}
+                        <div class="alert alert-info alert-inline mb-3">
+                            <strong>🏥 {{ hospitalisations }} hospitalisation(s) en cours</strong>
+                            <br>
+                            <a href="{% url 'patients_hospitalises' %}" class="btn btn-sm btn-info mt-2">
+                                Voir les patients
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if not anapath_urgents and actes_jour > 0 and hospitalisations == 0 %}
+                        <p class="text-muted text-center py-4">
+                            <i class="fas fa-thumbs-up text-success"></i><br>
+                            <strong>Tout semble en ordre !</strong>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RACCOURCIS RAPIDES ===== -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">⚡ Raccourcis Rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group-vertical w-100 d-grid gap-2" role="group">
+                        <a href="{% url 'facturation_create' %}" class="btn btn-primary btn-lg text-start">
+                            <i class="fas fa-plus"></i> Nouvelle Facturation
+                        </a>
+                        <a href="{% url 'observation_create' %}" class="btn btn-success btn-lg text-start">
+                            <i class="fas fa-edit"></i> Nouvelle Observation
+                        </a>
+                        <a href="{% url 'prevision_create' %}" class="btn btn-info btn-lg text-start">
+                            <i class="fas fa-hospital"></i> Prévoir une Hospitalisation
+                        </a>
+                        <a href="{% url 'facturation_search_list' %}" class="btn btn-secondary btn-lg text-start">
+                            <i class="fas fa-search"></i> Recherche
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== DERNIÈRES ACTIONS ===== -->
+    {% if operations_recentes %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📝 Dernières Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for op in operations_recentes %}
+                            {% if op|add:""|slice:"-11:" == "Observation" %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-file-medical text-primary"></i>
+                                                Observation créée
+                                            </h6>
+                                            <p class="mb-1">
+                                                <strong>{{ op.nom }} {{ op.prenom }}</strong> (DN {{ op.dn }})
+                                            </p>
+                                            <small class="text-muted">
+                                                {{ op.motif_consultation|truncatewords:5 }}
+                                            </small>
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ op.created_at|date:"d/m H:i" }}
+                                        </small>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-receipt text-success"></i>
+                                                Facturation créée
+                                            </h6>
+                                            <p class="mb-1">
+                                                <strong>{{ op.nom }} {{ op.prenom }}</strong> (DN {{ op.dn }})
+                                            </p>
+                                            <small class="text-muted">
+                                                Acte: {{ op.code_acte|default:"N/A" }}
+                                            </small>
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ op.created_at|date:"d/m H:i"|default:op.date_facture|date:"d/m" }}
+                                        </small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const activityData = {{ actes_par_jour|safe }};
+    
+    const ctx = document.getElementById('activityChart');
+    if (ctx) {
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(activityData),
+                datasets: [{
+                    label: 'Actes par jour',
+                    data: Object.values(activityData),
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + ' acte(s)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre d\'actes'
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

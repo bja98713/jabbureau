@@ -165,6 +165,74 @@ class FacturationSearchListView(LoginRequiredMixin, ListView):
         return qs
 
 
+# ========== DASHBOARD ==========
+@login_required(login_url='login')
+def dashboard(request):
+    """Affiche le tableau de bord avec résumé du jour, graphiques et alertes."""
+    today = timezone.localdate()
+    
+    # Résumé du jour
+    actes_jour = Facturation.objects.filter(date_acte=today).count()
+    actes_hier = Facturation.objects.filter(date_acte=today - timedelta(days=1)).count()
+    
+    montant_jour = Facturation.objects.filter(date_acte=today).aggregate(
+        total=Sum('code_acte__total_acte')
+    )['total'] or 0
+    
+    # Hospitalisations
+    hospitalisations = PrevisionHospitalisation.objects.filter(
+        date_entree__gte=today
+    ).count()
+    
+    # Anapath en attente
+    from .models import BiopsyReminder
+    anapath_attente = BiopsyReminder.objects.filter(sent=False).count()
+    anapath_urgents = BiopsyReminder.objects.filter(
+        sent=False,
+        send_on__lt=today - timedelta(days=30)
+    ).count()
+    
+    # Graphique 30 jours - actes par jour
+    dates_range = [today - timedelta(days=i) for i in range(29, -1, -1)]
+    actes_par_jour = {}
+    for d in dates_range:
+        count = Facturation.objects.filter(date_acte=d).count()
+        actes_par_jour[d.strftime('%d/%m')] = count
+    
+    # Prochains RDV (7 jours)
+    prochains = PrevisionHospitalisation.objects.filter(
+        date_entree__gte=today,
+        date_entree__lte=today + timedelta(days=7)
+    ).order_by('date_entree')[:5]
+    
+    # Dernieres actions (Observations + Facturations récentes)
+    operations_recentes = []
+    try:
+        obs_recentes = list(Observation.objects.order_by('-created_at')[:2])
+        fact_recentes = list(Facturation.objects.order_by('-created_at')[:2])
+        operations_recentes = sorted(
+            obs_recentes + fact_recentes,
+            key=lambda x: x.created_at if hasattr(x, 'created_at') else x.date_facture,
+            reverse=True
+        )[:3]
+    except Exception:
+        operations_recentes = []
+    
+    context = {
+        'actes_jour': actes_jour,
+        'actes_hier': actes_hier,
+        'montant_jour': int(montant_jour) if montant_jour else 0,
+        'hospitalisations': hospitalisations,
+        'anapath_attente': anapath_attente,
+        'anapath_urgents': anapath_urgents,
+        'actes_par_jour': json.dumps(actes_par_jour),
+        'prochains': prochains,
+        'operations_recentes': operations_recentes,
+    }
+    
+    return render(request, 'comptabilite/dashboard.html', context)
+
+
 class FacturationListView(LoginRequiredMixin, ListView):
     login_url = 'login'
     redirect_field_name = 'next'

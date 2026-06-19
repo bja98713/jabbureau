@@ -21,6 +21,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path('dashboard/', views.dashboard, name='dashboard'),
     path('', views.FacturationListView.as_view(), name='facturation_list'),
     path('nouveau/', views.FacturationCreateView.as_view(), name='facturation_create'),
     path('<int:pk>/', views.FacturationDetailView.as_view(), name='facturation_detail'),
