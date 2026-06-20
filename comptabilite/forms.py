@@ -1,24 +1,7 @@
 import re
-
 from django import forms
 from django.utils import timezone
-from .models import (
-    Facturation,
-    Paiement,
-    ParametrageFacturation,
-    Observation,
-    Patient,
-    Courrier,
-    Bibliographie,
-    CorrespondantEmail,
-)
-from .widgets import IntegerNumberInput, CodeSelectWidget
-
-### forms.py (extrait corrigé avec incrémentation fiable)
-
-from django import forms
-from django.utils import timezone
-from .models import Facturation, Paiement, ParametrageFacturation, Observation, Patient, Bibliographie, CorrespondantEmail
+from .models import Facturation, Paiement, Observation, Patient, Courrier, Bibliographie, CorrespondantEmail
 from .widgets import IntegerNumberInput, CodeSelectWidget
 
 class FacturationForm(forms.ModelForm):
@@ -60,13 +43,6 @@ class FacturationForm(forms.ModelForm):
             today = timezone.localdate()
             self.fields['date_acte'].initial = today
             self.fields['date_facture'].initial = today
-            try:
-                param = ParametrageFacturation.objects.first()
-                if param:
-                    numero = f"{param.prochain_numero}"
-                    self.fields['numero_facture'].initial = numero
-            except ParametrageFacturation.DoesNotExist:
-                self.fields['numero_facture'].initial = "1"
 
         for fname in ('date_naissance', 'date_acte', 'date_facture'):
             self.fields[fname].input_formats = ['%Y-%m-%d', '%d/%m/%Y']
@@ -98,29 +74,16 @@ class FacturationForm(forms.ModelForm):
         return cleaned
 
     def save(self, commit=True):
-        creating = self.instance._state.adding  # fiable
         fact = super().save(commit=False)
         # Régime LM déduit du total_paye
         fact.regime_lm = (fact.total_paye in (0, 230, 396))
 
-        # Respecte la saisie éventuelle de l'utilisateur
-        user_num = self.cleaned_data.get('numero_facture')
-        if user_num:
-            fact.numero_facture = user_num
-
-        # 🔒 Verrou clinique : jamais de numéro et surtout pas d'incrément
+        # Verrou clinique : jamais de numéro et surtout pas d'incrément.
         if (getattr(fact, 'lieu_acte', '') or '').lower() == 'clinique':
             fact.numero_facture = ''
 
         if commit:
             fact.save()
-
-            # Incrémente le compteur UNIQUEMENT si création ET pas Clinique ET numéro réellement attribué
-            if creating and (getattr(fact, 'lieu_acte', '') or '').lower() != 'clinique' and fact.numero_facture:
-                param = ParametrageFacturation.objects.first()
-                if param:
-                    param.prochain_numero += 1
-                    param.save()
 
             # Gestion du paiement
             modalite = self.cleaned_data.get('modalite_paiement')

@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 # Chargeur .env optionnel: ne casse pas si python-dotenv n'est pas installé en prod
@@ -20,7 +21,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'please-set-a-strong-secret-key')
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('1','true','yes','on')
 
 # ALLOWED_HOSTS depuis env (liste séparée par des virgules)
-ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'www.docteur-bronstein.com,127.0.0.1').split(',') if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'www.docteur-bronstein.com,127.0.0.1,testserver').split(',') if h.strip()]
 
 
 # Application 'comptabilite' + apps par défaut
@@ -31,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'comptabilite',
 ]
 
@@ -139,8 +141,10 @@ if not EMAIL_HOST_USER and EMAIL_BACKEND.endswith('smtp.EmailBackend'):
     # Petit avertissement visible dans la console au démarrage
     print('[Email] Aucun identifiant SMTP détecté – bascule vers console.EmailBackend (aucun envoi réel).')
 
+RUNNING_TESTS = 'test' in sys.argv
+
 # Réglages de sécurité appliqués seulement en production
-if not DEBUG:
+if not DEBUG and not RUNNING_TESTS:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
@@ -150,4 +154,3 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = 'same-origin'
     SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
-

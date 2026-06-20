@@ -1,351 +1,446 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load humanize %}
 
 {% block extra_css %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-    .dashboard-card {
-        border-left: 4px solid;
-        transition: transform 0.2s;
+    .dashboard-shell {
+        color: #1f2933;
     }
-    .dashboard-card:hover {
-        transform: translateY(-2px);
+    .dashboard-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #d9dee7;
+        margin-bottom: 1.5rem;
     }
-    .dashboard-card.primary { border-left-color: #0d6efd; }
-    .dashboard-card.success { border-left-color: #198754; }
-    .dashboard-card.info { border-left-color: #0dcaf0; }
-    .dashboard-card.warning { border-left-color: #ffc107; }
-    .dashboard-card.danger { border-left-color: #dc3545; }
-    
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin: 10px 0;
+    .dashboard-title {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: 0;
     }
-    .stat-label {
+    .dashboard-date {
+        margin: 0.25rem 0 0;
+        color: #667085;
+        font-size: 0.95rem;
+    }
+    .dashboard-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    .section-label {
+        margin: 0 0 0.65rem;
+        color: #667085;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    .metric-row {
+        margin-bottom: 1.35rem;
+    }
+    .metric-card {
+        height: 100%;
+        border: 1px solid #d9dee7;
+        border-left: 5px solid #3b82f6;
+        border-radius: 6px;
+        background: #ffffff;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    }
+    .metric-card.amount {
+        border-left-color: #16a34a;
+    }
+    .metric-card.warning {
+        border-left-color: #f59e0b;
+    }
+    .metric-card.danger {
+        border-left-color: #dc2626;
+    }
+    .metric-body {
+        padding: 1rem 1.1rem;
+    }
+    .metric-title {
+        margin: 0;
+        color: #667085;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .metric-value {
+        display: flex;
+        align-items: baseline;
+        gap: 0.45rem;
+        margin: 0.35rem 0 0;
+        color: #111827;
+        font-size: 1.9rem;
+        line-height: 1.05;
+        font-weight: 400;
+        letter-spacing: 0;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+    .metric-unit {
+        color: #667085;
+        font-size: 0.78rem;
+        font-weight: 400;
+        letter-spacing: 0.04em;
+    }
+    .metric-note {
+        display: block;
+        margin-top: 0.45rem;
+        color: #667085;
         font-size: 0.85rem;
-        text-muted;
     }
-    .alert-inline {
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
+    .panel-card {
+        border: 1px solid #d9dee7;
+        border-radius: 6px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    }
+    .panel-card .card-header {
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 0.85rem 1rem;
+    }
+    .panel-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+    .panel-subtitle {
+        color: #667085;
+        font-size: 0.85rem;
+    }
+    .dashboard-table th {
+        color: #475467;
+        border-top: 0;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: #f8fafc;
+    }
+    .dashboard-table td {
+        vertical-align: middle;
+    }
+    .bar-cell {
+        min-width: 120px;
+    }
+    .bar-track {
+        height: 0.45rem;
+        border-radius: 999px;
+        background: #eef2f7;
+        overflow: hidden;
+    }
+    .bar-fill {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: #3b82f6;
+    }
+    .empty-state {
+        padding: 2rem 1rem;
+        color: #667085;
+        text-align: center;
+    }
+    .quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .quick-actions .btn {
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    @media (max-width: 767.98px) {
+        .dashboard-header {
+            align-items: stretch;
+            flex-direction: column;
+        }
+        .dashboard-actions {
+            justify-content: flex-start;
+        }
+        .metric-value {
+            font-size: 1.75rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4 mb-4">
-    <div class="row align-items-center mb-4">
-        <div class="col">
-            <h1>📊 Tableau de Bord</h1>
-            <p class="text-muted">{{ today|date:"l d F Y"|capfirst }}</p>
+<div class="dashboard-shell">
+    <div class="dashboard-header">
+        <div>
+            <h1 class="dashboard-title">Tableau de bord</h1>
+            <p class="dashboard-date">{{ today|date:"l d F Y"|capfirst }}</p>
         </div>
-        <div class="col-auto">
-            <a href="{% url 'facturation_list' %}" class="btn btn-outline-secondary">
-                ← Retour aux actes
-            </a>
+        <div class="dashboard-actions">
+            <a href="{% url 'facturation_create' %}" class="btn btn-primary">Nouvelle facturation</a>
+            <a href="{% url 'observation_create' %}" class="btn btn-outline-primary">Nouvelle observation</a>
+            <a href="{% url 'facturation_search_list' %}" class="btn btn-outline-secondary">Recherche</a>
+            <a href="{% url 'facturation_list' %}" class="btn btn-outline-secondary">Chronologie</a>
         </div>
     </div>
 
-    <!-- ===== RÉSUMÉ DU JOUR ===== -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card dashboard-card primary">
-                <div class="card-body">
-                    <div class="stat-label">📋 ACTES DU JOUR</div>
-                    <div class="stat-number">{{ actes_jour }}</div>
-                    <small class="text-muted">
+    <p class="section-label">Actes</p>
+    <div class="row metric-row">
+        <div class="col-md-6 col-xl-3 mb-3">
+            <div class="metric-card">
+                <div class="metric-body">
+                    <p class="metric-title">Aujourd'hui</p>
+                    <p class="metric-value">{{ actes_jour|intcomma }}</p>
+                    <span class="metric-note">
                         {% if actes_hier >= actes_jour %}
-                            ↓ {{ actes_hier }} hier
+                            {{ actes_hier|intcomma }} hier
                         {% else %}
-                            ↑ {{ actes_hier }} hier
+                            {{ actes_hier|intcomma }} hier
                         {% endif %}
-                    </small>
+                    </span>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-3 mb-3">
-            <div class="card dashboard-card success">
-                <div class="card-body">
-                    <div class="stat-label">💰 MONTANT DU JOUR</div>
-                    <div class="stat-number">{{ montant_jour|default:"0" }}</div>
-                    <small class="text-muted">XPF</small>
+        <div class="col-md-6 col-xl-3 mb-3">
+            <div class="metric-card">
+                <div class="metric-body">
+                    <p class="metric-title">Semaine actuelle</p>
+                    <p class="metric-value">{{ nb_actes_semaine|intcomma }}</p>
+                    <span class="metric-note">Actes facturés</span>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-3 mb-3">
-            <div class="card dashboard-card info">
-                <div class="card-body">
-                    <div class="stat-label">🏥 HOSPITALISATIONS</div>
-                    <div class="stat-number">{{ hospitalisations }}</div>
-                    <small class="text-muted">En cours/planifiées</small>
+        <div class="col-md-6 col-xl-3 mb-3">
+            <div class="metric-card">
+                <div class="metric-body">
+                    <p class="metric-title">Mois actuel</p>
+                    <p class="metric-value">{{ nb_actes_mois|intcomma }}</p>
+                    <span class="metric-note">{{ today|date:"F Y"|capfirst }}</span>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-3 mb-3">
-            <div class="card dashboard-card {% if anapath_urgents > 0 %}danger{% else %}warning{% endif %}">
-                <div class="card-body">
-                    <div class="stat-label">⚠️ ANAPATH EN ATTENTE</div>
-                    <div class="stat-number">{{ anapath_attente }}</div>
-                    <small class="text-muted">
-                        {% if anapath_urgents > 0 %}
-                            {{ anapath_urgents }} URGENT!
-                        {% else %}
-                            Rappels
-                        {% endif %}
-                    </small>
+        <div class="col-md-6 col-xl-3 mb-3">
+            <div class="metric-card">
+                <div class="metric-body">
+                    <p class="metric-title">Année actuelle</p>
+                    <p class="metric-value">{{ nb_actes_annee|intcomma }}</p>
+                    <span class="metric-note">{{ today|date:"Y" }}</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== GRAPHIQUE ACTIVITÉ 30 JOURS ===== -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">📈 Activité (30 derniers jours)</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="activityChart" height="80"></canvas>
-                    <p class="text-muted text-center mt-3 small">
-                        Nombre d'actes facturés par jour
+    <p class="section-label">Montants</p>
+    <div class="row metric-row">
+        <div class="col-md-6 col-xl-3 mb-3">
+            <div class="metric-card amount">
+                <div class="metric-body">
+                    <p class="metric-title">Aujourd'hui</p>
+                    <p class="metric-value">
+                        <span>{{ montant_jour|default:"0"|intcomma }}</span>
+                        <span class="metric-unit">XPF</span>
                     </p>
+                    <span class="metric-note">Montant facturé</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3 mb-3">
+            <div class="metric-card amount">
+                <div class="metric-body">
+                    <p class="metric-title">Semaine actuelle</p>
+                    <p class="metric-value">
+                        <span>{{ montant_semaine|default:"0"|intcomma }}</span>
+                        <span class="metric-unit">XPF</span>
+                    </p>
+                    <span class="metric-note">Montant facturé</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3 mb-3">
+            <div class="metric-card amount">
+                <div class="metric-body">
+                    <p class="metric-title">Mois actuel</p>
+                    <p class="metric-value">
+                        <span>{{ montant_mois|default:"0"|intcomma }}</span>
+                        <span class="metric-unit">XPF</span>
+                    </p>
+                    <span class="metric-note">Montant facturé</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3 mb-3">
+            <div class="metric-card amount">
+                <div class="metric-body">
+                    <p class="metric-title">Année actuelle</p>
+                    <p class="metric-value">
+                        <span>{{ montant_annee|default:"0"|intcomma }}</span>
+                        <span class="metric-unit">XPF</span>
+                    </p>
+                    <span class="metric-note">Montant facturé</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== PROCHAINS RDV ET ALERTES ===== -->
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-3">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">⏰ Prochains Rendez-vous (7 jours)</h5>
+    <p class="section-label">Ana-path</p>
+    <div class="row metric-row">
+        <div class="col-md-4 mb-3">
+            <div class="metric-card {% if anapath_urgents > 0 %}danger{% else %}warning{% endif %}">
+                <div class="metric-body">
+                    <p class="metric-title">En attente</p>
+                    <p class="metric-value">{{ anapath_attente|intcomma }}</p>
+                    <span class="metric-note">
+                        {% if anapath_urgents > 0 %}
+                            {{ anapath_urgents|intcomma }} en retard
+                        {% else %}
+                            Aucun retard
+                        {% endif %}
+                    </span>
                 </div>
-                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                    {% if prochains %}
-                        <div class="list-group list-group-flush">
-                            {% for prev in prochains %}
-                                <a href="{% url 'prevision_detail' prev.pk %}" class="list-group-item list-group-item-action">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h6 class="mb-1">
-                                            <strong>{{ prev.date_entree|date:"d/m à H:i"|default:prev.date_bloc|date:"d/m" }}</strong>
-                                        </h6>
-                                    </div>
-                                    <p class="mb-1">
-                                        <i class="fas fa-hospital"></i>
-                                        {{ prev.motif_hospitalisation|truncatewords:5 }}
-                                    </p>
-                                    <small class="text-muted">
-                                        DN {{ prev.dn }} - {{ prev.nom }} {{ prev.prenom|truncatewords:1 }}
-                                    </small>
-                                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-7 mb-4">
+            <div class="card panel-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="panel-title">Activité du mois</h2>
+                        <span class="panel-subtitle">{{ today|date:"F Y"|capfirst }}</span>
+                    </div>
+                    <span class="panel-subtitle">{{ nb_actes_mois|intcomma }} actes | {{ montant_mois|default:"0"|intcomma }} XPF</span>
+                </div>
+                <div class="card-body p-0" style="max-height: 420px; overflow-y: auto;">
+                    <table class="table table-sm table-hover mb-0 dashboard-table">
+                        <thead style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th>Date</th>
+                                <th class="text-right">Actes</th>
+                                <th class="text-right">Total XPF</th>
+                                <th>Volume</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in activite_mois %}
+                                {% if row.nb > 0 or row.date <= today %}
+                                <tr class="{% if row.date == today %}table-primary{% endif %}">
+                                    <td>
+                                        {{ row.date|date:"D d/m"|capfirst }}
+                                        {% if row.date == today %}<span class="badge badge-primary ml-2">Aujourd'hui</span>{% endif %}
+                                    </td>
+                                    <td class="text-right">{{ row.nb|default:"0"|intcomma }}</td>
+                                    <td class="text-right">{{ row.total|default:"0"|intcomma }}</td>
+                                    <td class="bar-cell">
+                                        <div class="bar-track">
+                                            <span class="bar-fill" style="width: {% widthratio row.nb 25 100 %}%;"></span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
                             {% endfor %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted text-center py-4">
-                            <i class="fas fa-check-circle text-success"></i><br>
-                            Aucun RDV prévu pour les 7 prochains jours
-                        </p>
-                    {% endif %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-6 mb-3">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">⚠️ Alertes et À Faire</h5>
-                </div>
-                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+        <div class="col-lg-5 mb-4">
+            <div class="card panel-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="panel-title">Ana-path en attente</h2>
+                        <span class="panel-subtitle">{{ anapath_attente|intcomma }} rappel{{ anapath_attente|pluralize }}</span>
+                    </div>
                     {% if anapath_urgents > 0 %}
-                        <div class="alert alert-danger alert-inline mb-3">
-                            <strong>🔴 {{ anapath_urgents }} RAPPELS ANAPATH URGENTS</strong>
-                            <br>
-                            <small>Dépassés depuis plus de 30 jours — Action immédiate requise</small>
-                            <br>
-                            <a href="{% url 'admin:comptabilite_biopsyreminder_changelist' %}" class="btn btn-sm btn-danger mt-2">
-                                Voir la liste
-                            </a>
-                        </div>
+                        <span class="badge badge-danger">{{ anapath_urgents|intcomma }} en retard</span>
                     {% endif %}
-
-                    {% if anapath_attente > 0 and anapath_urgents == 0 %}
-                        <div class="alert alert-warning alert-inline mb-3">
-                            <strong>⚠️ {{ anapath_attente }} rappel(s) en attente</strong>
-                            <br>
-                            <small>Seront envoyés selon le calendrier</small>
-                        </div>
-                    {% endif %}
-
-                    {% if actes_jour == 0 %}
-                        <div class="alert alert-info alert-inline mb-3">
-                            <strong>ℹ️ Aucun acte le {{ today|date:"d/m/Y" }}</strong>
-                            <br>
-                            <a href="{% url 'facturation_create' %}" class="btn btn-sm btn-primary mt-2">
-                                Créer une facturation
-                            </a>
-                        </div>
-                    {% endif %}
-
-                    {% if hospitalisations > 0 %}
-                        <div class="alert alert-info alert-inline mb-3">
-                            <strong>🏥 {{ hospitalisations }} hospitalisation(s) en cours</strong>
-                            <br>
-                            <a href="{% url 'patients_hospitalises' %}" class="btn btn-sm btn-info mt-2">
-                                Voir les patients
-                            </a>
-                        </div>
-                    {% endif %}
-
-                    {% if not anapath_urgents and actes_jour > 0 and hospitalisations == 0 %}
-                        <p class="text-muted text-center py-4">
-                            <i class="fas fa-thumbs-up text-success"></i><br>
-                            <strong>Tout semble en ordre !</strong>
-                        </p>
+                </div>
+                <div class="card-body p-0" style="max-height: 420px; overflow-y: auto;">
+                    {% if anapath_liste %}
+                        <table class="table table-sm table-hover mb-0 dashboard-table">
+                            <thead style="position: sticky; top: 0; z-index: 1;">
+                                <tr>
+                                    <th>DN</th>
+                                    <th>Patient</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in anapath_liste %}
+                                <tr class="{% if r.send_on < today %}table-danger{% elif r.send_on == today %}table-warning{% endif %}">
+                                    <td>{{ r.dn }}</td>
+                                    <td>{{ r.nom }} {{ r.prenom }}</td>
+                                    <td>{{ r.send_on|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% if r.send_on < today %}
+                                            <span class="badge badge-danger">En retard</span>
+                                        {% elif r.send_on == today %}
+                                            <span class="badge badge-warning">Aujourd'hui</span>
+                                        {% else %}
+                                            <span class="badge badge-light">A venir</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="empty-state">Aucun rappel en attente.</div>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== RACCOURCIS RAPIDES ===== -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">⚡ Raccourcis Rapides</h5>
-                </div>
-                <div class="card-body">
-                    <div class="btn-group-vertical w-100 d-grid gap-2" role="group">
-                        <a href="{% url 'facturation_create' %}" class="btn btn-primary btn-lg text-start">
-                            <i class="fas fa-plus"></i> Nouvelle Facturation
-                        </a>
-                        <a href="{% url 'observation_create' %}" class="btn btn-success btn-lg text-start">
-                            <i class="fas fa-edit"></i> Nouvelle Observation
-                        </a>
-                        <a href="{% url 'prevision_create' %}" class="btn btn-info btn-lg text-start">
-                            <i class="fas fa-hospital"></i> Prévoir une Hospitalisation
-                        </a>
-                        <a href="{% url 'facturation_search_list' %}" class="btn btn-secondary btn-lg text-start">
-                            <i class="fas fa-search"></i> Recherche
-                        </a>
-                    </div>
-                </div>
+    <div class="card panel-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="panel-title">Facturations récentes</h2>
+                <span class="panel-subtitle">30 derniers jours</span>
             </div>
+            <span class="badge badge-success" style="font-size: 0.9rem;">{{ montant_30_jours|default:"0"|intcomma }} XPF</span>
         </div>
-    </div>
-
-    <!-- ===== DERNIÈRES ACTIONS ===== -->
-    {% if operations_recentes %}
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">📝 Dernières Actions</h5>
-                </div>
-                <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        {% for op in operations_recentes %}
-                            {% if op|add:""|slice:"-11:" == "Observation" %}
-                                <div class="list-group-item">
-                                    <div class="d-flex w-100 justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="mb-1">
-                                                <i class="fas fa-file-medical text-primary"></i>
-                                                Observation créée
-                                            </h6>
-                                            <p class="mb-1">
-                                                <strong>{{ op.nom }} {{ op.prenom }}</strong> (DN {{ op.dn }})
-                                            </p>
-                                            <small class="text-muted">
-                                                {{ op.motif_consultation|truncatewords:5 }}
-                                            </small>
-                                        </div>
-                                        <small class="text-muted">
-                                            {{ op.created_at|date:"d/m H:i" }}
-                                        </small>
-                                    </div>
-                                </div>
-                            {% else %}
-                                <div class="list-group-item">
-                                    <div class="d-flex w-100 justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="mb-1">
-                                                <i class="fas fa-receipt text-success"></i>
-                                                Facturation créée
-                                            </h6>
-                                            <p class="mb-1">
-                                                <strong>{{ op.nom }} {{ op.prenom }}</strong> (DN {{ op.dn }})
-                                            </p>
-                                            <small class="text-muted">
-                                                Acte: {{ op.code_acte|default:"N/A" }}
-                                            </small>
-                                        </div>
-                                        <small class="text-muted">
-                                            {{ op.created_at|date:"d/m H:i"|default:op.date_facture|date:"d/m" }}
-                                        </small>
-                                    </div>
-                                </div>
-                            {% endif %}
+        <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+            {% if fact_30_jours %}
+                <table class="table table-sm table-hover mb-0 dashboard-table">
+                    <thead style="position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th>Date</th>
+                            <th>N° facture</th>
+                            <th>DN</th>
+                            <th>Patient</th>
+                            <th>Lieu</th>
+                            <th>Acte</th>
+                            <th class="text-right">Montant</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in fact_30_jours %}
+                        <tr {% if f.date_acte == today %}class="table-primary"{% endif %}>
+                            <td>{{ f.date_acte|date:"d/m/Y" }}</td>
+                            <td>{{ f.numero_facture|default:"-" }}</td>
+                            <td>{{ f.dn }}</td>
+                            <td>{{ f.nom }} {{ f.prenom }}</td>
+                            <td>{{ f.lieu_acte }}</td>
+                            <td>{{ f.code_acte }}</td>
+                            <td class="text-right">{{ f.total_acte|default:"-"|intcomma }}</td>
+                            <td class="text-right">
+                                <a href="{% url 'facturation_detail' f.pk %}" class="btn btn-outline-primary btn-sm">Détail</a>
+                            </td>
+                        </tr>
                         {% endfor %}
-                    </div>
-                </div>
-            </div>
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">Aucune facturation ces 30 derniers jours.</div>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
-
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const activityData = {{ actes_par_jour|safe }};
-    
-    const ctx = document.getElementById('activityChart');
-    if (ctx) {
-        const chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(activityData),
-                datasets: [{
-                    label: 'Actes par jour',
-                    data: Object.values(activityData),
-                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1,
-                    borderRadius: 4,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y + ' acte(s)';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: { 
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Nombre d\'actes'
-                        }
-                    }
-                }
-            }
-        });
-    }
-});
-</script>
 {% endblock %}

@@ -1,13 +1,6 @@
 
 {% load static %}
 {% load user_extras %}
-{% if request.user.is_authenticated %}
-  {% get_user_profile request.user as profile %}
-  {% if profile %}
-    Statut : {% if profile.is_online %}🟢 En ligne{% else %}⚪ Hors ligne{% endif %}
-  {% endif %}
-{% endif %}
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -21,15 +14,24 @@
   <style>
     body { background-color: #f1e9ec; }
   </style>
+  {% block extra_css %}{% endblock %}
 </head>
 <body data-user-id="{{ request.user.id|default:'' }}" data-msg-url="{% url 'get_messages' %}" data-chat-template="{% url 'chat_view' 0 %}">
+  {% if request.user.is_authenticated %}
+    {% get_user_profile request.user as profile %}
+    {% if profile %}
+      <div class="sr-only">Statut : {% if profile.is_online %}En ligne{% else %}Hors ligne{% endif %}</div>
+    {% endif %}
+  {% endif %}
   <header class="bg-primary text-white py-3">
     <div class="container text-center">
       <h1 class="mb-0 mr-4">Dr. Jean-Ariel BRONSTEIN | Gastro-entérologue</h1>
       <nav class="flex-grow-1">
         <ul class="nav">
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'patients_list' %}">Accueil</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{% url 'dashboard' %}"><strong>📊 Tableau de Bord</strong></a></li>
+          {% if request.user.username == "bronstein" %}
+            <li class="nav-item"><a class="nav-link text-white" href="{% url 'dashboard' %}">📊 Tableau de Bord</a></li>
+          {% endif %}
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'facturation_list' %}">Chronologie</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'observations_patient_list' %}">Observations</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{% url 'bibliographie_list' %}">Bibliographie</a></li>

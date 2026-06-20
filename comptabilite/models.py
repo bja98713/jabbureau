@@ -233,7 +233,6 @@ class Facturation(models.Model):
             cfg.prochain_numero = numero + 1
             cfg.save(update_fields=['prochain_numero'])
 
-        # ⚠️ Formate le numéro ici comme tu le souhaites (je mets juste l'entier)
         self.numero_facture = str(numero)
 
     def save(self, *args, **kwargs):
@@ -485,7 +484,7 @@ class BiopsyReminder(models.Model):
     ]
     DEST_CHOICES = [
         ('CERBA', 'CERBA - France'),
-        ('CHT', "service d'anatomo-pathologie - ICPF"),
+        ('CHT', 'Service anatomo-pathologie - CHT'),
     ]
 
     dn = models.CharField(max_length=7, db_index=True, verbose_name="DN")
@@ -554,7 +553,6 @@ class PrevisionHospitalisation(models.Model):
     date_entree = models.DateField(null=True, blank=True)
     date_bloc = models.DateField(null=True, blank=True)
     date_sortie = models.DateField(null=True, blank=True)
-    date_sortie_theorique = models.DateField(null=True, blank=True)
     motif_hospitalisation = models.CharField(max_length=255)
     lieu_hospitalisation = models.CharField(max_length=50, choices=[
         ('Médecine', 'Médecine'),
@@ -578,7 +576,11 @@ class PrevisionHospitalisation(models.Model):
 
     @property
     def date_sortie_theorique(self):
-        return self.date_sortie or self.date_entree + timezone.timedelta(days=1)
+        if self.date_sortie:
+            return self.date_sortie
+        if self.date_entree:
+            return self.date_entree + timezone.timedelta(days=1)
+        return None
 
     def __str__(self):
         return f"{self.nom} {self.prenom} ({self.dn})"
