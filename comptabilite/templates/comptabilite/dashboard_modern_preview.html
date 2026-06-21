@@ -1,0 +1,514 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Prévisualisation dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preview-shell {
+        color: #17202a;
+    }
+    .preview-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        margin-bottom: 1.2rem;
+    }
+    .preview-actions .btn {
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    .preview-actions .btn-outline-light {
+        border-color: rgba(255, 255, 255, 0.68);
+        color: #ffffff;
+    }
+    .preview-action-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.8rem 1rem;
+        margin-bottom: 1.2rem;
+        border: 1px solid #d8e0ea;
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: 0 8px 22px rgba(23, 32, 42, 0.06);
+    }
+    .preview-action-text {
+        margin: 0;
+        color: #667085;
+        font-size: 0.92rem;
+    }
+    .hero-glass-card {
+        position: relative;
+        z-index: 1;
+        align-self: auto;
+        padding: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        border-radius: 10px;
+        color: #ffffff;
+        background: rgba(8, 32, 49, 0.56);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    }
+    .hero-glass-title {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.74);
+        font-size: 0.78rem;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+    .hero-glass-value {
+        margin: 0.45rem 0 0;
+        font-size: 2rem;
+        font-weight: 400;
+        line-height: 1.05;
+        font-variant-numeric: tabular-nums;
+    }
+    .hero-glass-note {
+        margin: 0.45rem 0 0;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.9rem;
+    }
+    .kpi-zone {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1.2rem;
+    }
+    .kpi-section {
+        border: 1px solid #d8e0ea;
+        border-radius: 8px;
+        background: #ffffff;
+        overflow: hidden;
+        box-shadow: 0 8px 22px rgba(23, 32, 42, 0.06);
+    }
+    .kpi-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e7ecf2;
+        background: #f8fafc;
+    }
+    .kpi-section-title {
+        margin: 0;
+        color: #344054;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .kpi-item {
+        min-height: 7.5rem;
+        padding: 1rem;
+        border-right: 1px solid #edf1f5;
+    }
+    .kpi-item:last-child {
+        border-right: 0;
+    }
+    .kpi-label {
+        margin: 0;
+        color: #667085;
+        font-size: 0.8rem;
+    }
+    .kpi-number {
+        display: flex;
+        align-items: baseline;
+        gap: 0.4rem;
+        margin: 0.45rem 0 0;
+        color: #101828;
+        font-size: 1.85rem;
+        font-weight: 450;
+        line-height: 1.05;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+    .kpi-unit {
+        color: #667085;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+    .kpi-foot {
+        display: block;
+        margin-top: 0.5rem;
+        color: #7a8794;
+        font-size: 0.82rem;
+    }
+    .status-strip {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 1rem;
+    }
+    .status-number {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 450;
+        font-variant-numeric: tabular-nums;
+    }
+    .status-note {
+        margin: 0.2rem 0 0;
+        color: #667085;
+    }
+    .status-badge {
+        padding: 0.45rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+    .status-ok {
+        color: #166534;
+        background: #dcfce7;
+    }
+    .status-late {
+        color: #991b1b;
+        background: #fee2e2;
+    }
+    .work-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .work-panel {
+        border: 1px solid #d8e0ea;
+        border-radius: 8px;
+        background: #ffffff;
+        overflow: hidden;
+        box-shadow: 0 8px 22px rgba(23, 32, 42, 0.06);
+    }
+    .work-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e7ecf2;
+        background: #ffffff;
+    }
+    .work-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 650;
+    }
+    .work-subtitle {
+        color: #667085;
+        font-size: 0.85rem;
+    }
+    .modern-table {
+        margin-bottom: 0;
+    }
+    .modern-table th {
+        border-top: 0;
+        color: #52616f;
+        background: #f8fafc;
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+    .modern-table td {
+        vertical-align: middle;
+    }
+    .spark {
+        height: 0.5rem;
+        border-radius: 999px;
+        overflow: hidden;
+        background: #edf2f7;
+    }
+    .spark span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #0f766e, #2563eb);
+    }
+    .recent-panel {
+        border: 1px solid #d8e0ea;
+        border-radius: 8px;
+        background: #ffffff;
+        overflow: hidden;
+        box-shadow: 0 8px 22px rgba(23, 32, 42, 0.06);
+    }
+    .empty-message {
+        padding: 2rem 1rem;
+        color: #667085;
+        text-align: center;
+    }
+    @media (max-width: 991.98px) {
+        .work-grid {
+            grid-template-columns: 1fr;
+        }
+        .kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .kpi-item:nth-child(2n) {
+            border-right: 0;
+        }
+        .kpi-item {
+            border-bottom: 1px solid #edf1f5;
+        }
+        .kpi-item:nth-last-child(-n+2) {
+            border-bottom: 0;
+        }
+    }
+    @media (max-width: 575.98px) {
+        .preview-hero {
+            padding: 1rem;
+            min-height: 260px;
+        }
+        .preview-action-bar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+        .preview-actions {
+            justify-content: flex-start;
+        }
+        .kpi-grid {
+            grid-template-columns: 1fr;
+        }
+        .kpi-item,
+        .kpi-item:nth-child(2n) {
+            border-right: 0;
+            border-bottom: 1px solid #edf1f5;
+        }
+        .kpi-item:last-child {
+            border-bottom: 0;
+        }
+        .kpi-number {
+            font-size: 1.65rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="preview-shell">
+    <section class="preview-action-bar">
+        <div class="hero-glass-card">
+            <p class="hero-glass-title">Synthèse du mois</p>
+            <p class="hero-glass-value">{{ montant_mois|default:"0"|intcomma }} <span class="kpi-unit" style="color: rgba(255,255,255,0.72);">XPF</span></p>
+            <p class="hero-glass-note">{{ nb_actes_mois|intcomma }} acte{{ nb_actes_mois|pluralize }} facturé{{ nb_actes_mois|pluralize }} en {{ today|date:"F"|capfirst }}</p>
+        </div>
+        <div>
+            <p class="preview-action-text">Actions rapides</p>
+            <div class="preview-actions">
+                <a class="btn btn-primary" href="{% url 'facturation_create' %}">Nouvelle facturation</a>
+                <a class="btn btn-outline-primary" href="{% url 'observation_create' %}">Nouvelle observation</a>
+                <a class="btn btn-outline-secondary" href="{% url 'dashboard' %}">Version actuelle</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="kpi-zone">
+        <section class="kpi-section">
+            <div class="kpi-section-header">
+                <h2 class="kpi-section-title">Actes</h2>
+                <span class="work-subtitle">Volume facturé</span>
+            </div>
+            <div class="kpi-grid">
+                <div class="kpi-item">
+                    <p class="kpi-label">Aujourd'hui</p>
+                    <p class="kpi-number">{{ actes_jour|intcomma }}</p>
+                    <span class="kpi-foot">{{ actes_hier|intcomma }} hier</span>
+                </div>
+                <div class="kpi-item">
+                    <p class="kpi-label">Semaine</p>
+                    <p class="kpi-number">{{ nb_actes_semaine|intcomma }}</p>
+                    <span class="kpi-foot">Semaine actuelle</span>
+                </div>
+                <div class="kpi-item">
+                    <p class="kpi-label">Mois</p>
+                    <p class="kpi-number">{{ nb_actes_mois|intcomma }}</p>
+                    <span class="kpi-foot">{{ today|date:"F Y"|capfirst }}</span>
+                </div>
+                <div class="kpi-item">
+                    <p class="kpi-label">Année</p>
+                    <p class="kpi-number">{{ nb_actes_annee|intcomma }}</p>
+                    <span class="kpi-foot">{{ today|date:"Y" }}</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="kpi-section">
+            <div class="kpi-section-header">
+                <h2 class="kpi-section-title">Montants</h2>
+                <span class="work-subtitle">Total facturé</span>
+            </div>
+            <div class="kpi-grid">
+                <div class="kpi-item">
+                    <p class="kpi-label">Aujourd'hui</p>
+                    <p class="kpi-number"><span>{{ montant_jour|default:"0"|intcomma }}</span><span class="kpi-unit">XPF</span></p>
+                    <span class="kpi-foot">Journée en cours</span>
+                </div>
+                <div class="kpi-item">
+                    <p class="kpi-label">Semaine</p>
+                    <p class="kpi-number"><span>{{ montant_semaine|default:"0"|intcomma }}</span><span class="kpi-unit">XPF</span></p>
+                    <span class="kpi-foot">Semaine actuelle</span>
+                </div>
+                <div class="kpi-item">
+                    <p class="kpi-label">Mois</p>
+                    <p class="kpi-number"><span>{{ montant_mois|default:"0"|intcomma }}</span><span class="kpi-unit">XPF</span></p>
+                    <span class="kpi-foot">{{ today|date:"F Y"|capfirst }}</span>
+                </div>
+                <div class="kpi-item">
+                    <p class="kpi-label">Année</p>
+                    <p class="kpi-number"><span>{{ montant_annee|default:"0"|intcomma }}</span><span class="kpi-unit">XPF</span></p>
+                    <span class="kpi-foot">{{ today|date:"Y" }}</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="kpi-section">
+            <div class="kpi-section-header">
+                <h2 class="kpi-section-title">Ana-path</h2>
+                <span class="work-subtitle">Suivi des rappels</span>
+            </div>
+            <div class="status-strip">
+                <div>
+                    <p class="status-number">{{ anapath_attente|intcomma }}</p>
+                    <p class="status-note">Rappel{{ anapath_attente|pluralize }} en attente</p>
+                </div>
+                {% if anapath_urgents > 0 %}
+                    <span class="status-badge status-late">{{ anapath_urgents|intcomma }} en retard</span>
+                {% else %}
+                    <span class="status-badge status-ok">Aucun retard</span>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <div class="work-grid">
+        <section class="work-panel">
+            <div class="work-panel-header">
+                <div>
+                    <h2 class="work-title">Activité du mois</h2>
+                    <span class="work-subtitle">{{ nb_actes_mois|intcomma }} actes | {{ montant_mois|default:"0"|intcomma }} XPF</span>
+                </div>
+            </div>
+            <div style="max-height: 430px; overflow-y: auto;">
+                <table class="table table-sm table-hover modern-table">
+                    <thead style="position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th>Date</th>
+                            <th class="text-right">Actes</th>
+                            <th class="text-right">Total</th>
+                            <th>Volume</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in activite_mois %}
+                            {% if row.nb > 0 or row.date <= today %}
+                            <tr class="{% if row.date == today %}table-primary{% endif %}">
+                                <td>{{ row.date|date:"D d/m"|capfirst }}</td>
+                                <td class="text-right">{{ row.nb|default:"0"|intcomma }}</td>
+                                <td class="text-right">{{ row.total|default:"0"|intcomma }}</td>
+                                <td style="min-width: 120px;">
+                                    <div class="spark"><span style="width: {% widthratio row.nb 25 100 %}%;"></span></div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="work-panel">
+            <div class="work-panel-header">
+                <div>
+                    <h2 class="work-title">Ana-path à suivre</h2>
+                    <span class="work-subtitle">{{ anapath_attente|intcomma }} rappel{{ anapath_attente|pluralize }}</span>
+                </div>
+            </div>
+            <div style="max-height: 430px; overflow-y: auto;">
+                {% if anapath_liste %}
+                    <table class="table table-sm table-hover modern-table">
+                        <thead style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th>DN</th>
+                                <th>Patient</th>
+                                <th>Date</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in anapath_liste %}
+                            <tr class="{% if r.send_on < today %}table-danger{% elif r.send_on == today %}table-warning{% endif %}">
+                                <td>{{ r.dn }}</td>
+                                <td>{{ r.nom }} {{ r.prenom }}</td>
+                                <td>{{ r.send_on|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if r.send_on < today %}
+                                        <span class="badge badge-danger">En retard</span>
+                                    {% elif r.send_on == today %}
+                                        <span class="badge badge-warning">Aujourd'hui</span>
+                                    {% else %}
+                                        <span class="badge badge-light">A venir</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-message">Aucun rappel en attente.</div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <section class="recent-panel">
+        <div class="work-panel-header">
+            <div>
+                <h2 class="work-title">Facturations récentes</h2>
+                <span class="work-subtitle">30 derniers jours</span>
+            </div>
+            <span class="badge badge-success" style="font-size: 0.9rem;">{{ montant_30_jours|default:"0"|intcomma }} XPF</span>
+        </div>
+        <div style="max-height: 500px; overflow-y: auto;">
+            {% if fact_30_jours %}
+                <table class="table table-sm table-hover modern-table">
+                    <thead style="position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th>Date</th>
+                            <th>N° facture</th>
+                            <th>DN</th>
+                            <th>Patient</th>
+                            <th>Lieu</th>
+                            <th>Acte</th>
+                            <th class="text-right">Montant</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in fact_30_jours %}
+                        <tr {% if f.date_acte == today %}class="table-primary"{% endif %}>
+                            <td>{{ f.date_acte|date:"d/m/Y" }}</td>
+                            <td>{{ f.numero_facture|default:"-" }}</td>
+                            <td>{{ f.dn }}</td>
+                            <td>{{ f.nom }} {{ f.prenom }}</td>
+                            <td>{{ f.lieu_acte }}</td>
+                            <td>{{ f.code_acte }}</td>
+                            <td class="text-right">{{ f.total_acte|default:"-"|intcomma }}</td>
+                            <td class="text-right">
+                                <a href="{% url 'facturation_detail' f.pk %}" class="btn btn-outline-primary btn-sm">Détail</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-message">Aucune facturation ces 30 derniers jours.</div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}

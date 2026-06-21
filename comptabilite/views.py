@@ -167,14 +167,9 @@ class FacturationSearchListView(LoginRequiredMixin, ListView):
 
 
 # ========== DASHBOARD ==========
-@login_required(login_url='login')
-def dashboard(request):
-    """Affiche le tableau de bord avec résumé du jour, graphiques et alertes."""
-    if request.user.username != "bronstein":
-        raise PermissionDenied
-
+def _dashboard_context():
     today = timezone.localdate()
-    
+
     # Résumé du jour
     actes_jour = Facturation.objects.filter(date_acte=today).count()
     actes_hier = Facturation.objects.filter(date_acte=today - timedelta(days=1)).count()
@@ -265,8 +260,26 @@ def dashboard(request):
         'montant_30_jours': int(montant_30_jours),
         'today': today,
     }
-    
+
+
+@login_required(login_url='login')
+def dashboard(request):
+    """Affiche le tableau de bord avec résumé du jour, graphiques et alertes."""
+    if request.user.username != "bronstein":
+        raise PermissionDenied
+
+    context = _dashboard_context()
     return render(request, 'comptabilite/dashboard.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_preview(request):
+    """Prévisualisation locale d'une mise en page alternative du tableau de bord."""
+    if request.user.username != "bronstein":
+        raise PermissionDenied
+
+    context = _dashboard_context()
+    return render(request, 'comptabilite/dashboard_modern_preview.html', context)
 
 
 class FacturationListView(LoginRequiredMixin, ListView):
