@@ -1,7 +1,17 @@
 import re
 from django import forms
+from django.db import transaction
 from django.utils import timezone
-from .models import Facturation, Paiement, Observation, Patient, Courrier, Bibliographie, CorrespondantEmail
+from .models import (
+    Facturation,
+    Paiement,
+    ParametrageFacturation,
+    Observation,
+    Patient,
+    Courrier,
+    Bibliographie,
+    CorrespondantEmail,
+)
 from .widgets import IntegerNumberInput, CodeSelectWidget
 
 class FacturationForm(forms.ModelForm):
@@ -43,6 +53,8 @@ class FacturationForm(forms.ModelForm):
             today = timezone.localdate()
             self.fields['date_acte'].initial = today
             self.fields['date_facture'].initial = today
+            param = ParametrageFacturation.objects.first()
+            self.fields['numero_facture'].initial = str(param.prochain_numero if param else 1)
 
         for fname in ('date_naissance', 'date_acte', 'date_facture'):
             self.fields[fname].input_formats = ['%Y-%m-%d', '%d/%m/%Y']
@@ -74,6 +86,7 @@ class FacturationForm(forms.ModelForm):
         return cleaned
 
     def save(self, commit=True):
+        creating = self.instance._state.adding
         fact = super().save(commit=False)
         # Régime LM déduit du total_paye
         fact.regime_lm = (fact.total_paye in (0, 230, 396))
@@ -84,6 +97,19 @@ class FacturationForm(forms.ModelForm):
 
         if commit:
             fact.save()
+
+            if creating and (getattr(fact, 'lieu_acte', '') or '').lower() != 'clinique' and fact.numero_facture:
+                with transaction.atomic():
+                    param = ParametrageFacturation.objects.select_for_update().first()
+                    if param is None:
+                        param = ParametrageFacturation.objects.create(prochain_numero=1)
+                    try:
+                        prochain_numero = int(fact.numero_facture) + 1
+                    except (TypeError, ValueError):
+                        prochain_numero = param.prochain_numero + 1
+                    if param.prochain_numero < prochain_numero:
+                        param.prochain_numero = prochain_numero
+                        param.save(update_fields=['prochain_numero'])
 
             # Gestion du paiement
             modalite = self.cleaned_data.get('modalite_paiement')
