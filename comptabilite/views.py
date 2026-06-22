@@ -260,6 +260,7 @@ def _dashboard_context():
         'montant_30_jours': int(montant_30_jours),
         'today': today,
     }
+    return context
 
 
 @login_required(login_url='login')
