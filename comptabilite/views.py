@@ -7,6 +7,7 @@ import io
 import os
 import tempfile
 import calendar
+from pathlib import Path
 from decimal import Decimal
 
 import pdfkit
@@ -21,7 +22,7 @@ from django.db import models
 from django.db.models import Q, Sum, Count
 from django.core.paginator import Paginator
 from django.forms.widgets import NumberInput
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import get_template, render_to_string
 from django.urls import reverse_lazy
@@ -494,6 +495,10 @@ def print_facture(request, pk):
 
 # ========== Bordereau ==========
 
+def _bordereaux_dir() -> Path:
+    return Path(settings.MEDIA_ROOT) / 'bordereaux'
+
+
 @login_required
 def create_bordereau(request):
     """
@@ -571,9 +576,47 @@ def print_bordereau(request, num_bordereau):
     html_string = render_to_string('comptabilite/bordereau_pdf.html', context)
     pdf_file    = HTML(string=html_string).write_pdf()
 
+    bordereaux_dir = _bordereaux_dir()
+    bordereaux_dir.mkdir(parents=True, exist_ok=True)
+    (bordereaux_dir / f"{num_bordereau}.pdf").write_bytes(pdf_file)
+
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{num_bordereau}.pdf"'
     return response
+
+
+@login_required
+def bordereaux_archive(request):
+    bordereaux_dir = _bordereaux_dir()
+    files = []
+    if bordereaux_dir.exists():
+        for path in sorted(bordereaux_dir.glob('*.pdf'), key=lambda p: p.stat().st_mtime, reverse=True):
+            created_at = timezone.localtime(
+                dt_module.datetime.fromtimestamp(path.stat().st_mtime, tz=dt_module.timezone.utc)
+            )
+            files.append({
+                'filename': path.name,
+                'name': path.stem,
+                'created_at': created_at,
+                'size': path.stat().st_size,
+            })
+
+    return render(request, 'comptabilite/bordereaux_archive.html', {
+        'bordereaux': files,
+    })
+
+
+@login_required
+def bordereau_pdf_saved(request, filename):
+    safe_name = Path(filename).name
+    if safe_name != filename or not safe_name.endswith('.pdf'):
+        raise Http404("Bordereau introuvable.")
+
+    path = _bordereaux_dir() / safe_name
+    if not path.exists() or not path.is_file():
+        raise Http404("Bordereau introuvable.")
+
+    return FileResponse(path.open('rb'), content_type='application/pdf', filename=safe_name)
 
 
 # ========== Activity list / filters ==========

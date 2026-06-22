@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Bordereaux enregistrés{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">Bordereaux enregistrés</h2>
+      <p class="text-muted mb-0">PDF sauvegardés dans le dossier bordereaux.</p>
+    </div>
+    <a href="{% url 'create_bordereau' %}" class="btn btn-primary">Nouveau bordereau</a>
+  </div>
+
+  {% if bordereaux %}
+    <div class="card">
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Date de création</th>
+              <th>Nom du bordereau</th>
+              <th class="text-right">Taille</th>
+              <th class="text-right">PDF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for bordereau in bordereaux %}
+              <tr>
+                <td>{{ bordereau.created_at|date:"d/m/Y H:i" }}</td>
+                <td>{{ bordereau.name }}</td>
+                <td class="text-right">{{ bordereau.size|filesizeformat }}</td>
+                <td class="text-right">
+                  <a href="{% url 'bordereau_pdf_saved' bordereau.filename %}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">
+                    Ouvrir
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      Aucun bordereau PDF sauvegardé pour le moment.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
