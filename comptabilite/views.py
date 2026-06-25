@@ -20,6 +20,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q, Sum, Count
+from django.db.models.functions import ExtractMonth, ExtractYear
 from django.core.paginator import Paginator
 from django.forms.widgets import NumberInput
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
@@ -55,7 +56,7 @@ except Exception:  # ImportError or any environment issue
 
 # ========== Local app imports ==========
 from .models import (
-    Facturation, Code, Paiement,
+    Facturation, ActiviteFacturation, Code, Paiement,
     PrevisionHospitalisation, Message, Observation, Patient, Courrier, CourrierPhoto, Bibliographie,
     CorrespondantEmail,
 )
@@ -168,6 +169,151 @@ class FacturationSearchListView(LoginRequiredMixin, ListView):
 
 
 # ========== DASHBOARD ==========
+def _format_xpf_axis(value):
+    value = int(value or 0)
+    if value >= 1000000:
+        millions = value / 1000000
+        label = f"{millions:.1f}M" if value % 1000000 else f"{int(millions)}M"
+        return label.replace(".0", "")
+    if value >= 1000:
+        return f"{round(value / 1000):.0f}k"
+    return str(value)
+
+
+def _activite_annuelle_context(today):
+    mois_labels = ["Jan", "Fev", "Mar", "Avr", "Mai", "Juin", "Jul", "Aou", "Sep", "Oct", "Nov", "Dec"]
+    activite_qs = (
+        ActiviteFacturation.objects
+        .exclude(date_acte__year__in=[2005, 2024])
+        .exclude(date_acte__year=2025, date_acte__month__in=[3, 4])
+    )
+    annees_representees = (
+        activite_qs
+        .annotate(annee=ExtractYear('date_acte'))
+        .values('annee')
+        .distinct()
+        .count()
+    )
+
+    annees_actives_par_mois = {mois: 0 for mois in range(1, 13)}
+    for row in (
+        activite_qs
+        .annotate(mois=ExtractMonth('date_acte'), annee=ExtractYear('date_acte'))
+        .values('mois')
+        .annotate(nb_annees=Count('annee', distinct=True))
+    ):
+        annees_actives_par_mois[row['mois']] = row['nb_annees']
+
+    # Moyenne avec un diviseur propre a chaque mois pour ne pas pénaliser
+    # les années incomplètes qui n'ont aucune activité sur ce mois.
+    moyenne_par_mois = {mois: 0 for mois in range(1, 13)}
+    total_par_mois = {mois: 0 for mois in range(1, 13)}
+    for row in (
+        activite_qs
+        .annotate(mois=ExtractMonth('date_acte'))
+        .values('mois')
+        .annotate(total=Sum('total_acte'))
+    ):
+        total_par_mois[row['mois']] = row['total'] or 0
+    for mois in range(1, 13):
+        moyenne_par_mois[mois] = int(round(total_par_mois[mois] / (annees_actives_par_mois[mois] or 1)))
+
+    annee_courante_par_mois = {mois: 0 for mois in range(1, 13)}
+    for row in (
+        activite_qs
+        .filter(date_acte__year=today.year)
+        .annotate(mois=ExtractMonth('date_acte'))
+        .values('mois')
+        .annotate(total=Sum('total_acte'))
+    ):
+        annee_courante_par_mois[row['mois']] = int(row['total'] or 0)
+
+    x_start = 54
+    x_step = 612 / 11
+    y_top = 24
+    y_height = 180
+    points_moyenne = []
+    points_annee = []
+    rows = []
+    cumul_moyenne = 0
+    cumul_annee = 0
+
+    monthly_rows = []
+    for index, label in enumerate(mois_labels):
+        mois = index + 1
+        moyenne = moyenne_par_mois[mois]
+        annee = annee_courante_par_mois[mois]
+        cumul_moyenne += moyenne
+        cumul_annee += annee
+        monthly_rows.append({
+            'label': label,
+            'mois': mois,
+            'moyenne': moyenne,
+            'annee': annee,
+            'cumul_moyenne': cumul_moyenne,
+            'cumul_annee': cumul_annee,
+            'annees_actives': annees_actives_par_mois[mois],
+        })
+
+    chart_max = max(
+        [row['cumul_moyenne'] for row in monthly_rows] +
+        [row['cumul_annee'] for row in monthly_rows] +
+        [1]
+    )
+    chart_max = int((chart_max + 999999) // 1000000 * 1000000) or 1000000
+
+    for index, row_data in enumerate(monthly_rows):
+        x = x_start + index * x_step
+        mois = row_data['mois']
+        moyenne = row_data['cumul_moyenne']
+        annee = row_data['cumul_annee']
+        moyenne_y = y_top + (chart_max - moyenne) * y_height / chart_max
+        annee_y = y_top + (chart_max - annee) * y_height / chart_max
+        moyenne_height = y_top + y_height - moyenne_y
+        annee_height = y_top + y_height - annee_y
+        points_moyenne.append(f"{x:.1f},{moyenne_y:.1f}")
+        current_visible = mois <= today.month
+        if current_visible:
+            points_annee.append(f"{x:.1f},{annee_y:.1f}")
+        rows.append({
+            'label': row_data['label'],
+            'x': f"{x:.1f}",
+            'bar_moyenne_x': f"{x - 12:.1f}",
+            'bar_annee_x': f"{x + 2:.1f}",
+            'moyenne': moyenne,
+            'annee': annee,
+            'moyenne_mensuelle': row_data['moyenne'],
+            'annee_mensuelle': row_data['annee'],
+            'annees_actives': row_data['annees_actives'],
+            'moyenne_y': f"{moyenne_y:.1f}",
+            'annee_y': f"{annee_y:.1f}",
+            'moyenne_height': f"{moyenne_height:.1f}",
+            'annee_height': f"{annee_height:.1f}",
+            'current_visible': current_visible,
+        })
+
+    axis_values = [chart_max, chart_max // 2, 0]
+    axis = []
+    for value in axis_values:
+        y = y_top + (chart_max - value) * y_height / chart_max
+        axis.append({
+            'value': value,
+            'label': _format_xpf_axis(value),
+            'y': f"{y:.1f}",
+        })
+
+    return {
+        'activite_annuelle_rows': rows,
+        'activite_annuelle_points_moyenne': " ".join(points_moyenne),
+        'activite_annuelle_points_annee': " ".join(points_annee),
+        'activite_annuelle_axis': axis,
+        'activite_annees_representees': annees_representees,
+        'activite_annees_exclues': [2005, 2024],
+        'activite_mois_exclus': ['Mars 2025', 'Avril 2025'],
+        'activite_annee_courante': today.year,
+    }
+
+
 def _dashboard_context():
     today = timezone.localdate()
 
@@ -282,6 +428,7 @@ def _dashboard_context():
         'montant_30_jours': int(montant_30_jours),
         'today': today,
     }
+    context.update(_activite_annuelle_context(today))
     return context
 
 

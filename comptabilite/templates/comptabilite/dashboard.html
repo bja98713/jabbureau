@@ -182,6 +182,52 @@
     .volume-scale span:nth-child(3)::before {
         right: 0;
     }
+    .activity-chart {
+        padding: 1rem;
+    }
+    .activity-chart svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 280px;
+    }
+    .chart-grid {
+        stroke: #e5e7eb;
+        stroke-width: 1;
+    }
+    .chart-axis-label,
+    .chart-month-label {
+        fill: #667085;
+        font-size: 0.72rem;
+    }
+    .chart-bar-average {
+        fill: #94a3b8;
+    }
+    .chart-bar-current {
+        fill: #16a34a;
+    }
+    .chart-legend {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        color: #475467;
+        font-size: 0.85rem;
+    }
+    .chart-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .chart-legend-swatch {
+        width: 1.4rem;
+        height: 0.7rem;
+        border-radius: 2px;
+        background: #94a3b8;
+    }
+    .chart-legend-swatch.current {
+        background: #16a34a;
+    }
     .empty-state {
         padding: 2rem 1rem;
         color: #667085;
@@ -350,6 +396,41 @@
                     <span class="metric-note">{{ montant_bordereaux_attente|default:"0"|intcomma }} XPF à bordereauter</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="card panel-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="panel-title">Activité annuelle</h2>
+                <span class="panel-subtitle">Cumul mensuel historique et année {{ activite_annee_courante }} · 2005, 2024, mars 2025 et avril 2025 exclus</span>
+            </div>
+            <span class="panel-subtitle">{{ activite_annees_representees|intcomma }} année{{ activite_annees_representees|pluralize }} représentée{{ activite_annees_representees|pluralize }}</span>
+        </div>
+        <div class="activity-chart">
+            <div class="chart-legend mb-3">
+                <span class="chart-legend-item"><span class="chart-legend-swatch"></span>Cumul moyenne historique</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch current"></span>Cumul {{ activite_annee_courante }}</span>
+            </div>
+            <svg viewBox="0 0 720 250" role="img" aria-labelledby="activityChartTitle activityChartDesc">
+                <title id="activityChartTitle">Activité annuelle cumulative</title>
+                <desc id="activityChartDesc">Histogramme cumulatif par mois comparant la moyenne historique et l'activité de l'année en cours.</desc>
+                {% for tick in activite_annuelle_axis %}
+                    <line class="chart-grid" x1="54" y1="{{ tick.y }}" x2="680" y2="{{ tick.y }}"></line>
+                    <text class="chart-axis-label" x="8" y="{{ tick.y }}" dominant-baseline="middle">{{ tick.label }}</text>
+                {% endfor %}
+                {% for row in activite_annuelle_rows %}
+                    <rect class="chart-bar-average" x="{{ row.bar_moyenne_x }}" y="{{ row.moyenne_y }}" width="10" height="{{ row.moyenne_height }}" rx="2">
+                        <title>{{ row.label }} - cumul moyenne : {{ row.moyenne|intcomma }} XPF</title>
+                    </rect>
+                    {% if row.current_visible %}
+                        <rect class="chart-bar-current" x="{{ row.bar_annee_x }}" y="{{ row.annee_y }}" width="10" height="{{ row.annee_height }}" rx="2">
+                            <title>{{ row.label }} - cumul {{ activite_annee_courante }} : {{ row.annee|intcomma }} XPF</title>
+                        </rect>
+                    {% endif %}
+                    <text class="chart-month-label" x="{{ row.x }}" y="232" text-anchor="middle">{{ row.label }}</text>
+                {% endfor %}
+            </svg>
         </div>
     </div>
 

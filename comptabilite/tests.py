@@ -1,11 +1,13 @@
+from datetime import date
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 from django.urls import reverse
 
 from .forms import BibliographieForm, FacturationForm
-from .models import Bibliographie, Facturation, ParametrageFacturation
-from .views import _dashboard_context
+from .models import ActiviteFacturation, Bibliographie, Facturation, ParametrageFacturation
+from .views import _activite_annuelle_context, _dashboard_context
 
 
 class BibliographieFormTest(TestCase):
@@ -206,3 +208,89 @@ class DashboardContextTest(TestCase):
 
 		self.assertEqual(context['bordereaux_attente'], 2)
 		self.assertEqual(context['montant_bordereaux_attente'], 100000)
+
+	def test_annual_activity_chart_uses_activity_table_monthly_average(self):
+		ActiviteFacturation.objects.create(date_acte=date(2005, 1, 10), total_acte=900000)
+		ActiviteFacturation.objects.create(date_acte=date(2024, 1, 10), total_acte=900000)
+		ActiviteFacturation.objects.create(date_acte=date(2024, 1, 10), total_acte=100000)
+		ActiviteFacturation.objects.create(date_acte=date(2025, 1, 10), total_acte=300000)
+		ActiviteFacturation.objects.create(date_acte=date(2024, 2, 10), total_acte=200000)
+		ActiviteFacturation.objects.create(date_acte=date(2025, 2, 10), total_acte=200000)
+		ActiviteFacturation.objects.create(date_acte=date(2025, 3, 10), total_acte=100000)
+		ActiviteFacturation.objects.create(date_acte=date(2025, 4, 10), total_acte=100000)
+		ActiviteFacturation.objects.create(date_acte=date(2026, 2, 10), total_acte=600000)
+		ActiviteFacturation.objects.create(date_acte=date(2026, 3, 10), total_acte=900000)
+		ActiviteFacturation.objects.create(date_acte=date(2026, 4, 10), total_acte=800000)
+
+		context = _activite_annuelle_context(date(2026, 4, 15))
+		rows = {row['label']: row for row in context['activite_annuelle_rows']}
+
+		self.assertEqual(context['activite_annees_representees'], 2)
+		self.assertEqual(context['activite_annees_exclues'], [2005, 2024])
+		self.assertEqual(context['activite_mois_exclus'], ['Mars 2025', 'Avril 2025'])
+		self.assertEqual(rows['Jan']['moyenne'], 300000)
+		self.assertEqual(rows['Jan']['moyenne_mensuelle'], 300000)
+		self.assertEqual(rows['Jan']['annees_actives'], 1)
+		self.assertEqual(rows['Jan']['annee'], 0)
+		self.assertEqual(rows['Fev']['moyenne'], 700000)
+		self.assertEqual(rows['Fev']['moyenne_mensuelle'], 400000)
+		self.assertEqual(rows['Fev']['annees_actives'], 2)
+		self.assertEqual(rows['Fev']['annee'], 600000)
+		self.assertEqual(rows['Mar']['moyenne'], 1600000)
+		self.assertEqual(rows['Mar']['moyenne_mensuelle'], 900000)
+		self.assertEqual(rows['Mar']['annees_actives'], 1)
+		self.assertEqual(rows['Mar']['annee'], 1500000)
+		self.assertEqual(rows['Avr']['moyenne'], 2400000)
+		self.assertEqual(rows['Avr']['moyenne_mensuelle'], 800000)
+		self.assertEqual(rows['Avr']['annees_actives'], 1)
+		self.assertEqual(rows['Avr']['annee'], 2300000)
+		self.assertTrue(rows['Avr']['current_visible'])
+		self.assertFalse(rows['Mai']['current_visible'])
+
+	def test_activity_table_mirrors_facturation_date_and_total_only(self):
+		first_day = date(2026, 1, 10)
+		second_day = date(2026, 2, 10)
+		facture = Facturation.objects.create(
+			dn='1234567',
+			nom='Dupont',
+			prenom='Jean',
+			date_naissance='1980-01-01',
+			date_acte=first_day,
+			date_facture=first_day,
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=100000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='7654321',
+			nom='Martin',
+			prenom='Anne',
+			date_naissance='1981-01-01',
+			date_acte=first_day,
+			date_facture=first_day,
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=50000,
+			statut_dossier='RAS',
+		)
+
+		self.assertEqual(ActiviteFacturation.objects.filter(date_acte=first_day).count(), 2)
+		self.assertEqual(
+			sum(row.total_acte for row in ActiviteFacturation.objects.filter(date_acte=first_day)),
+			150000
+		)
+
+		facture.date_acte = second_day
+		facture.date_facture = second_day
+		facture.total_acte = 200000
+		facture.save()
+
+		self.assertEqual(ActiviteFacturation.objects.filter(date_acte=first_day).count(), 1)
+		self.assertEqual(ActiviteFacturation.objects.get(date_acte=first_day).total_acte, 50000)
+		self.assertEqual(ActiviteFacturation.objects.filter(date_acte=second_day).count(), 1)
+		self.assertEqual(ActiviteFacturation.objects.get(date_acte=second_day).total_acte, 200000)
+
+		facture.delete()
+
+		self.assertFalse(ActiviteFacturation.objects.filter(date_acte=second_day).exists())

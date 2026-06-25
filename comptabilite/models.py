@@ -253,6 +253,27 @@ class Facturation(models.Model):
 
         return super().save(*args, **kwargs)
 
+
+class ActiviteFacturation(models.Model):
+    date_acte = models.DateField(verbose_name="Date de l'acte")
+    total_acte = models.DecimalField(
+        max_digits=12,
+        decimal_places=0,
+        default=0,
+        verbose_name="Montant total facturé"
+    )
+
+    class Meta:
+        ordering = ["date_acte"]
+        verbose_name = "Activité facturation"
+        verbose_name_plural = "Activités facturation"
+        indexes = [
+            models.Index(fields=["date_acte"]),
+        ]
+
+    def __str__(self):
+        return f"{self.date_acte} - {self.total_acte} XPF"
+
 # Nouvelle table Paiement
 class Paiement(models.Model):
     # On suppose qu'un paiement correspond à une facture unique.

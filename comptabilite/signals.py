@@ -1,8 +1,22 @@
 from django.contrib.auth.models import User
 from django.dispatch import receiver
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from django.contrib.auth.signals import user_logged_in
-from .models import UserProfile, Observation, Patient, Facturation
+from .models import UserProfile, Observation, Patient, Facturation, ActiviteFacturation
+
+
+def rebuild_activite_facturation():
+    rows = [
+        ActiviteFacturation(
+            date_acte=facture.date_acte,
+            total_acte=facture.total_acte or 0,
+        )
+        for facture in Facturation.objects.only('date_acte', 'total_acte')
+        if facture.date_acte
+    ]
+    ActiviteFacturation.objects.all().delete()
+    if rows:
+        ActiviteFacturation.objects.bulk_create(rows)
 
 @receiver(post_save, sender=User)
 def create_profile_on_user_creation(sender, instance, created, **kwargs):
@@ -81,3 +95,13 @@ def upsert_patient_from_facturation(sender, instance: Facturation, created: bool
         fields.append('date_naissance')
     if fields:
         patient.save(update_fields=fields + ['updated_at'])
+
+
+@receiver(post_save, sender=Facturation)
+def sync_activite_from_facturation_save(sender, instance: Facturation, created: bool, **kwargs):
+    rebuild_activite_facturation()
+
+
+@receiver(post_delete, sender=Facturation)
+def sync_activite_from_facturation_delete(sender, instance: Facturation, **kwargs):
+    rebuild_activite_facturation()
