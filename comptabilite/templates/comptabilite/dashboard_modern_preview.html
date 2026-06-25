@@ -423,6 +423,24 @@
                 {% endif %}
             </div>
         </section>
+
+        <section class="kpi-section">
+            <div class="kpi-section-header">
+                <h2 class="kpi-section-title">Bordereaux</h2>
+                <span class="work-subtitle">A préparer</span>
+            </div>
+            <div class="status-strip">
+                <div>
+                    <p class="status-number">{{ bordereaux_attente|intcomma }}</p>
+                    <p class="status-note">{{ montant_bordereaux_attente|default:"0"|intcomma }} XPF en attente</p>
+                </div>
+                {% if bordereaux_attente > 0 %}
+                    <span class="status-badge status-late">A bordereauter</span>
+                {% else %}
+                    <span class="status-badge status-ok">Aucun</span>
+                {% endif %}
+            </div>
+        </section>
     </div>
 
     <div class="work-grid">

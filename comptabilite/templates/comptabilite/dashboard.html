@@ -325,12 +325,12 @@
         </div>
     </div>
 
-    <p class="section-label">Ana-path</p>
+    <p class="section-label">Suivi</p>
     <div class="row metric-row">
         <div class="col-md-4 mb-3">
             <div class="metric-card {% if anapath_urgents > 0 %}danger{% else %}warning{% endif %}">
                 <div class="metric-body">
-                    <p class="metric-title">En attente</p>
+                    <p class="metric-title">Ana-path en attente</p>
                     <p class="metric-value">{{ anapath_attente|intcomma }}</p>
                     <span class="metric-note">
                         {% if anapath_urgents > 0 %}
@@ -339,6 +339,15 @@
                             Aucun retard
                         {% endif %}
                     </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="metric-card {% if bordereaux_attente > 0 %}warning{% else %}amount{% endif %}">
+                <div class="metric-body">
+                    <p class="metric-title">Bordereaux en attente</p>
+                    <p class="metric-value">{{ bordereaux_attente|intcomma }}</p>
+                    <span class="metric-note">{{ montant_bordereaux_attente|default:"0"|intcomma }} XPF à bordereauter</span>
                 </div>
             </div>
         </div>

@@ -144,3 +144,65 @@ class DashboardContextTest(TestCase):
 		self.assertEqual(activity_by_day[2]['nb'], 1)
 		self.assertEqual(activity_by_day[2]['total'], 600000)
 		self.assertEqual(activity_by_day[2]['volume_montant_pct'], 100)
+
+	def test_pending_bordereaux_count_and_amount_use_bordereau_scope(self):
+		today = timezone.localdate()
+
+		Facturation.objects.create(
+			dn='1234567',
+			nom='Dupont',
+			prenom='Jean',
+			date_naissance='1980-01-01',
+			date_acte=today,
+			date_facture=today,
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=100000,
+			tiers_payant=40000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='7654321',
+			nom='Martin',
+			prenom='Anne',
+			date_naissance='1981-01-01',
+			date_acte=today,
+			date_facture=today,
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=200000,
+			tiers_payant=60000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='2222222',
+			nom='Durand',
+			prenom='Paul',
+			date_naissance='1982-01-01',
+			date_acte=today,
+			date_facture=today,
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=300000,
+			tiers_payant=90000,
+			statut_dossier='RAS',
+			numero_bordereau='M2026-06-01-001',
+		)
+		Facturation.objects.create(
+			dn='3333333',
+			nom='Bernard',
+			prenom='Luc',
+			date_naissance='1983-01-01',
+			date_acte=today,
+			date_facture=today,
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=400000,
+			tiers_payant=100000,
+			statut_dossier='Impayé',
+		)
+
+		context = _dashboard_context()
+
+		self.assertEqual(context['bordereaux_attente'], 2)
+		self.assertEqual(context['montant_bordereaux_attente'], 100000)

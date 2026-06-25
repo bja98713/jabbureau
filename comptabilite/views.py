@@ -188,6 +188,18 @@ def _dashboard_context():
     ).count()
     anapath_liste = BiopsyReminder.objects.filter(sent=False).order_by('send_on').select_related()
 
+    # Bordereaux en attente, avec le même périmètre que la création de bordereau.
+    bordereaux_attente_qs = (
+        Facturation.objects
+        .filter(tiers_payant__gt=0)
+        .filter(statut_dossier='RAS')
+        .filter(Q(numero_bordereau__isnull=True) | Q(numero_bordereau=""))
+    )
+    bordereaux_attente = bordereaux_attente_qs.count()
+    montant_bordereaux_attente = (
+        bordereaux_attente_qs.aggregate(total=Sum('tiers_payant'))['total'] or 0
+    )
+
     # Activité du mois courant - agrégat par jour
     premier_jour_mois = today.replace(day=1)
     nb_jours_mois = calendar.monthrange(today.year, today.month)[1]
@@ -258,6 +270,8 @@ def _dashboard_context():
         'anapath_attente': anapath_attente,
         'anapath_urgents': anapath_urgents,
         'anapath_liste': anapath_liste,
+        'bordereaux_attente': bordereaux_attente,
+        'montant_bordereaux_attente': int(montant_bordereaux_attente),
         'actes_par_jour': json.dumps(actes_par_jour),
         'activite_mois': activite_mois,
         'nb_actes_mois': nb_actes_mois,
