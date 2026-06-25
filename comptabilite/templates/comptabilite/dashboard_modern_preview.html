@@ -230,6 +230,46 @@
         border-radius: inherit;
         background: linear-gradient(90deg, #0f766e, #2563eb);
     }
+    .volume-scale {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        margin-top: 0.25rem;
+        padding-top: 0.25rem;
+        border-top: 1px solid #d8dee8;
+        color: #667085;
+        font-size: 0.68rem;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+    .volume-scale span {
+        position: relative;
+    }
+    .volume-scale span::before {
+        content: "";
+        position: absolute;
+        top: -0.31rem;
+        width: 1px;
+        height: 0.25rem;
+        background: #98a2b3;
+    }
+    .volume-scale span:nth-child(1) {
+        text-align: left;
+    }
+    .volume-scale span:nth-child(1)::before {
+        left: 0;
+    }
+    .volume-scale span:nth-child(2) {
+        text-align: center;
+    }
+    .volume-scale span:nth-child(2)::before {
+        left: 50%;
+    }
+    .volume-scale span:nth-child(3) {
+        text-align: right;
+    }
+    .volume-scale span:nth-child(3)::before {
+        right: 0;
+    }
     .recent-panel {
         border: 1px solid #d8e0ea;
         border-radius: 8px;
@@ -410,8 +450,13 @@
                                 <td>{{ row.date|date:"D d/m"|capfirst }}</td>
                                 <td class="text-right">{{ row.nb|default:"0"|intcomma }}</td>
                                 <td class="text-right">{{ row.total|default:"0"|intcomma }}</td>
-                                <td style="min-width: 120px;">
-                                    <div class="spark"><span style="width: {% widthratio row.nb 25 100 %}%;"></span></div>
+                                <td style="min-width: 170px;">
+                                    <div class="spark"><span style="width: {{ row.volume_montant_pct }}%;"></span></div>
+                                    <div class="volume-scale" aria-label="Echelle du volume de 0 a 500000 XPF">
+                                        <span>0</span>
+                                        <span>250k</span>
+                                        <span>500k</span>
+                                    </div>
                                 </td>
                             </tr>
                             {% endif %}

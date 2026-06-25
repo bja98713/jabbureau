@@ -1,9 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 from django.urls import reverse
 
 from .forms import BibliographieForm, FacturationForm
 from .models import Bibliographie, Facturation, ParametrageFacturation
+from .views import _dashboard_context
 
 
 class BibliographieFormTest(TestCase):
@@ -85,3 +87,60 @@ class BibliographieListViewTest(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'Maladie de Crohn')
 		self.assertNotContains(response, 'RGO')
+
+
+class DashboardContextTest(TestCase):
+	def test_activity_volume_is_graduated_from_zero_to_500000_xpf(self):
+		today = timezone.localdate()
+		first_day = today.replace(day=1)
+		second_day = first_day.replace(day=2)
+
+		Facturation.objects.create(
+			dn='1234567',
+			nom='Dupont',
+			prenom='Jean',
+			date_naissance='1980-01-01',
+			date_acte=first_day,
+			date_facture=first_day,
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=125000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='7654321',
+			nom='Martin',
+			prenom='Anne',
+			date_naissance='1981-01-01',
+			date_acte=first_day,
+			date_facture=first_day,
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=125000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='2222222',
+			nom='Durand',
+			prenom='Paul',
+			date_naissance='1982-01-01',
+			date_acte=second_day,
+			date_facture=second_day,
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=600000,
+			statut_dossier='RAS',
+		)
+
+		context = _dashboard_context()
+		activity_by_day = {
+			row['date'].day: row
+			for row in context['activite_mois']
+		}
+
+		self.assertEqual(activity_by_day[1]['nb'], 2)
+		self.assertEqual(activity_by_day[1]['total'], 250000)
+		self.assertEqual(activity_by_day[1]['volume_montant_pct'], 50)
+		self.assertEqual(activity_by_day[2]['nb'], 1)
+		self.assertEqual(activity_by_day[2]['total'], 600000)
+		self.assertEqual(activity_by_day[2]['volume_montant_pct'], 100)

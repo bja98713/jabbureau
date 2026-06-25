@@ -204,6 +204,13 @@ def _dashboard_context():
             'total': int(agg['total'] or 0),
         })
 
+    volume_montant_max = 500000
+    for row in activite_mois:
+        row['volume_montant_pct'] = min(
+            int(round(row['total'] * 100 / volume_montant_max)),
+            100
+        )
+
     # Totaux de la semaine, du mois et de l'année
     debut_semaine = today - timedelta(days=today.weekday())
     fin_semaine = debut_semaine + timedelta(days=6)

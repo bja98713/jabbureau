@@ -128,7 +128,7 @@
         vertical-align: middle;
     }
     .bar-cell {
-        min-width: 120px;
+        min-width: 170px;
     }
     .bar-track {
         height: 0.45rem;
@@ -141,6 +141,46 @@
         height: 100%;
         border-radius: inherit;
         background: #3b82f6;
+    }
+    .volume-scale {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        margin-top: 0.25rem;
+        padding-top: 0.25rem;
+        border-top: 1px solid #d8dee8;
+        color: #667085;
+        font-size: 0.68rem;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+    .volume-scale span {
+        position: relative;
+    }
+    .volume-scale span::before {
+        content: "";
+        position: absolute;
+        top: -0.31rem;
+        width: 1px;
+        height: 0.25rem;
+        background: #98a2b3;
+    }
+    .volume-scale span:nth-child(1) {
+        text-align: left;
+    }
+    .volume-scale span:nth-child(1)::before {
+        left: 0;
+    }
+    .volume-scale span:nth-child(2) {
+        text-align: center;
+    }
+    .volume-scale span:nth-child(2)::before {
+        left: 50%;
+    }
+    .volume-scale span:nth-child(3) {
+        text-align: right;
+    }
+    .volume-scale span:nth-child(3)::before {
+        right: 0;
     }
     .empty-state {
         padding: 2rem 1rem;
@@ -336,7 +376,12 @@
                                     <td class="text-right">{{ row.total|default:"0"|intcomma }}</td>
                                     <td class="bar-cell">
                                         <div class="bar-track">
-                                            <span class="bar-fill" style="width: {% widthratio row.nb 25 100 %}%;"></span>
+                                            <span class="bar-fill" style="width: {{ row.volume_montant_pct }}%;"></span>
+                                        </div>
+                                        <div class="volume-scale" aria-label="Echelle du volume de 0 a 500000 XPF">
+                                            <span>0</span>
+                                            <span>250k</span>
+                                            <span>500k</span>
                                         </div>
                                     </td>
                                 </tr>
