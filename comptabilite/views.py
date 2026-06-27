@@ -234,6 +234,8 @@ def _activite_annuelle_context(today):
     y_height = 180
     points_moyenne = []
     points_annee = []
+    points_moyenne_plus_10 = []
+    points_moyenne_moins_10 = []
     rows = []
     cumul_moyenne = 0
     cumul_annee = 0
@@ -252,12 +254,15 @@ def _activite_annuelle_context(today):
             'annee': annee,
             'cumul_moyenne': cumul_moyenne,
             'cumul_annee': cumul_annee,
+            'cumul_moyenne_plus_10': int(round(cumul_moyenne * 1.10)),
+            'cumul_moyenne_moins_10': int(round(cumul_moyenne * 0.90)),
             'annees_actives': annees_actives_par_mois[mois],
         })
 
     chart_max = max(
         [row['cumul_moyenne'] for row in monthly_rows] +
         [row['cumul_annee'] for row in monthly_rows] +
+        [row['cumul_moyenne_plus_10'] for row in monthly_rows] +
         [1]
     )
     chart_max = int((chart_max + 999999) // 1000000 * 1000000) or 1000000
@@ -267,28 +272,39 @@ def _activite_annuelle_context(today):
         mois = row_data['mois']
         moyenne = row_data['cumul_moyenne']
         annee = row_data['cumul_annee']
+        moyenne_plus_10 = row_data['cumul_moyenne_plus_10']
+        moyenne_moins_10 = row_data['cumul_moyenne_moins_10']
         moyenne_y = y_top + (chart_max - moyenne) * y_height / chart_max
         annee_y = y_top + (chart_max - annee) * y_height / chart_max
-        moyenne_height = y_top + y_height - moyenne_y
-        annee_height = y_top + y_height - annee_y
+        moyenne_plus_10_y = y_top + (chart_max - moyenne_plus_10) * y_height / chart_max
+        moyenne_moins_10_y = y_top + (chart_max - moyenne_moins_10) * y_height / chart_max
+        ecart_pct = ((annee - moyenne) * 100 / moyenne) if moyenne else 0
+        ecart_label = f"{ecart_pct:+.1f}%"
+        ecart_y = max(y_top + 10, annee_y - 12)
         points_moyenne.append(f"{x:.1f},{moyenne_y:.1f}")
+        points_moyenne_plus_10.append(f"{x:.1f},{moyenne_plus_10_y:.1f}")
+        points_moyenne_moins_10.append(f"{x:.1f},{moyenne_moins_10_y:.1f}")
         current_visible = mois <= today.month
         if current_visible:
             points_annee.append(f"{x:.1f},{annee_y:.1f}")
         rows.append({
             'label': row_data['label'],
             'x': f"{x:.1f}",
-            'bar_moyenne_x': f"{x - 12:.1f}",
-            'bar_annee_x': f"{x + 2:.1f}",
             'moyenne': moyenne,
             'annee': annee,
+            'moyenne_plus_10': moyenne_plus_10,
+            'moyenne_moins_10': moyenne_moins_10,
             'moyenne_mensuelle': row_data['moyenne'],
             'annee_mensuelle': row_data['annee'],
             'annees_actives': row_data['annees_actives'],
             'moyenne_y': f"{moyenne_y:.1f}",
             'annee_y': f"{annee_y:.1f}",
-            'moyenne_height': f"{moyenne_height:.1f}",
-            'annee_height': f"{annee_height:.1f}",
+            'moyenne_plus_10_y': f"{moyenne_plus_10_y:.1f}",
+            'moyenne_moins_10_y': f"{moyenne_moins_10_y:.1f}",
+            'ecart_pct': round(ecart_pct, 1),
+            'ecart_label': ecart_label,
+            'ecart_y': f"{ecart_y:.1f}",
+            'ecart_positive': ecart_pct >= 0,
             'current_visible': current_visible,
         })
 
@@ -306,6 +322,8 @@ def _activite_annuelle_context(today):
         'activite_annuelle_rows': rows,
         'activite_annuelle_points_moyenne': " ".join(points_moyenne),
         'activite_annuelle_points_annee': " ".join(points_annee),
+        'activite_annuelle_points_moyenne_plus_10': " ".join(points_moyenne_plus_10),
+        'activite_annuelle_points_moyenne_moins_10': " ".join(points_moyenne_moins_10),
         'activite_annuelle_axis': axis,
         'activite_annees_representees': annees_representees,
         'activite_annees_exclues': [2005, 2024],

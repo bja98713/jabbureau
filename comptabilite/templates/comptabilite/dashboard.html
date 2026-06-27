@@ -200,11 +200,56 @@
         fill: #667085;
         font-size: 0.72rem;
     }
-    .chart-bar-average {
-        fill: #94a3b8;
+    .chart-line-average {
+        fill: none;
+        stroke: #64748b;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
     }
-    .chart-bar-current {
+    .chart-line-current {
+        fill: none;
+        stroke: #16a34a;
+        stroke-width: 3.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .chart-line-threshold {
+        fill: none;
+        stroke: #dc2626;
+        stroke-width: 2;
+        stroke-dasharray: 7 5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .chart-dot-average {
+        fill: #ffffff;
+        stroke: #64748b;
+        stroke-width: 2;
+    }
+    .chart-dot-current {
         fill: #16a34a;
+        stroke: #ffffff;
+        stroke-width: 2;
+    }
+    .chart-dot-threshold {
+        fill: #dc2626;
+        stroke: #ffffff;
+        stroke-width: 1.5;
+    }
+    .chart-delta-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        paint-order: stroke;
+        stroke: #ffffff;
+        stroke-width: 3px;
+        stroke-linejoin: round;
+    }
+    .chart-delta-positive {
+        fill: #15803d;
+    }
+    .chart-delta-negative {
+        fill: #dc2626;
     }
     .chart-legend {
         display: flex;
@@ -221,12 +266,21 @@
     }
     .chart-legend-swatch {
         width: 1.4rem;
-        height: 0.7rem;
-        border-radius: 2px;
-        background: #94a3b8;
+        height: 0.18rem;
+        border-radius: 999px;
+        background: #64748b;
     }
     .chart-legend-swatch.current {
         background: #16a34a;
+    }
+    .chart-legend-swatch.threshold {
+        background: repeating-linear-gradient(
+            90deg,
+            #dc2626 0,
+            #dc2626 8px,
+            transparent 8px,
+            transparent 13px
+        );
     }
     .empty-state {
         padding: 2rem 1rem;
@@ -411,22 +465,39 @@
             <div class="chart-legend mb-3">
                 <span class="chart-legend-item"><span class="chart-legend-swatch"></span>Cumul moyenne historique</span>
                 <span class="chart-legend-item"><span class="chart-legend-swatch current"></span>Cumul {{ activite_annee_courante }}</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch threshold"></span>+/- 10% moyenne</span>
             </div>
             <svg viewBox="0 0 720 250" role="img" aria-labelledby="activityChartTitle activityChartDesc">
                 <title id="activityChartTitle">Activité annuelle cumulative</title>
-                <desc id="activityChartDesc">Histogramme cumulatif par mois comparant la moyenne historique et l'activité de l'année en cours.</desc>
+                <desc id="activityChartDesc">Courbes cumulatives par mois comparant la moyenne historique, l'activité de l'année en cours, et les seuils plus ou moins dix pour cent.</desc>
                 {% for tick in activite_annuelle_axis %}
                     <line class="chart-grid" x1="54" y1="{{ tick.y }}" x2="680" y2="{{ tick.y }}"></line>
                     <text class="chart-axis-label" x="8" y="{{ tick.y }}" dominant-baseline="middle">{{ tick.label }}</text>
                 {% endfor %}
+                <polyline class="chart-line-threshold" points="{{ activite_annuelle_points_moyenne_plus_10 }}"></polyline>
+                <polyline class="chart-line-threshold" points="{{ activite_annuelle_points_moyenne_moins_10 }}"></polyline>
+                <polyline class="chart-line-average" points="{{ activite_annuelle_points_moyenne }}"></polyline>
+                {% if activite_annuelle_points_annee %}
+                    <polyline class="chart-line-current" points="{{ activite_annuelle_points_annee }}"></polyline>
+                {% endif %}
                 {% for row in activite_annuelle_rows %}
-                    <rect class="chart-bar-average" x="{{ row.bar_moyenne_x }}" y="{{ row.moyenne_y }}" width="10" height="{{ row.moyenne_height }}" rx="2">
+                    <circle class="chart-dot-threshold" cx="{{ row.x }}" cy="{{ row.moyenne_plus_10_y }}" r="3">
+                        <title>{{ row.label }} - +10% moyenne : {{ row.moyenne_plus_10|intcomma }} XPF</title>
+                    </circle>
+                    <circle class="chart-dot-threshold" cx="{{ row.x }}" cy="{{ row.moyenne_moins_10_y }}" r="3">
+                        <title>{{ row.label }} - -10% moyenne : {{ row.moyenne_moins_10|intcomma }} XPF</title>
+                    </circle>
+                    <circle class="chart-dot-average" cx="{{ row.x }}" cy="{{ row.moyenne_y }}" r="4">
                         <title>{{ row.label }} - cumul moyenne : {{ row.moyenne|intcomma }} XPF</title>
-                    </rect>
+                    </circle>
                     {% if row.current_visible %}
-                        <rect class="chart-bar-current" x="{{ row.bar_annee_x }}" y="{{ row.annee_y }}" width="10" height="{{ row.annee_height }}" rx="2">
+                        <circle class="chart-dot-current" cx="{{ row.x }}" cy="{{ row.annee_y }}" r="4.5">
                             <title>{{ row.label }} - cumul {{ activite_annee_courante }} : {{ row.annee|intcomma }} XPF</title>
-                        </rect>
+                        </circle>
+                        <text class="chart-delta-label {% if row.ecart_positive %}chart-delta-positive{% else %}chart-delta-negative{% endif %}" x="{{ row.x }}" y="{{ row.ecart_y }}" text-anchor="middle">
+                            {{ row.ecart_label }}
+                            <title>{{ row.label }} - écart réel vs moyenne : {{ row.ecart_label }}</title>
+                        </text>
                     {% endif %}
                     <text class="chart-month-label" x="{{ row.x }}" y="232" text-anchor="middle">{{ row.label }}</text>
                 {% endfor %}
