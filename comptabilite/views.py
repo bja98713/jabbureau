@@ -20,7 +20,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q, Sum, Count
-from django.db.models.functions import ExtractMonth, ExtractYear
+from django.db.models.functions import ExtractMonth
 from django.core.paginator import Paginator
 from django.forms.widgets import NumberInput
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
@@ -169,6 +169,22 @@ class FacturationSearchListView(LoginRequiredMixin, ListView):
 
 
 # ========== DASHBOARD ==========
+ACTIVITE_REFERENCE_2025 = {
+    1: 3043967,
+    2: 6086505,
+    3: 3385997,
+    4: 3983588,
+    5: 5191908,
+    6: 1915346,
+    7: 2697442,
+    8: 4129483,
+    9: 4977322,
+    10: 5079070,
+    11: 5057078,
+    12: 3659906,
+}
+
+
 def _format_xpf_axis(value):
     value = int(value or 0)
     if value >= 1000000:
@@ -182,51 +198,27 @@ def _format_xpf_axis(value):
 
 def _activite_annuelle_context(today):
     mois_labels = ["Jan", "Fev", "Mar", "Avr", "Mai", "Juin", "Jul", "Aou", "Sep", "Oct", "Nov", "Dec"]
-    activite_qs = (
-        ActiviteFacturation.objects
-        .exclude(date_acte__year__in=[2005, 2024])
-        .exclude(date_acte__year=2025, date_acte__month__in=[3, 4])
-    )
-    annees_representees = (
-        activite_qs
-        .annotate(annee=ExtractYear('date_acte'))
-        .values('annee')
-        .distinct()
-        .count()
-    )
+    activite_annee_courante_qs = ActiviteFacturation.objects.filter(date_acte__year=today.year)
 
-    annees_actives_par_mois = {mois: 0 for mois in range(1, 13)}
-    for row in (
-        activite_qs
-        .annotate(mois=ExtractMonth('date_acte'), annee=ExtractYear('date_acte'))
-        .values('mois')
-        .annotate(nb_annees=Count('annee', distinct=True))
-    ):
-        annees_actives_par_mois[row['mois']] = row['nb_annees']
-
-    # Moyenne avec un diviseur propre a chaque mois pour ne pas pénaliser
-    # les années incomplètes qui n'ont aucune activité sur ce mois.
     moyenne_par_mois = {mois: 0 for mois in range(1, 13)}
-    total_par_mois = {mois: 0 for mois in range(1, 13)}
-    for row in (
-        activite_qs
-        .annotate(mois=ExtractMonth('date_acte'))
-        .values('mois')
-        .annotate(total=Sum('total_acte'))
-    ):
-        total_par_mois[row['mois']] = row['total'] or 0
-    for mois in range(1, 13):
-        moyenne_par_mois[mois] = int(round(total_par_mois[mois] / (annees_actives_par_mois[mois] or 1)))
-
     annee_courante_par_mois = {mois: 0 for mois in range(1, 13)}
     for row in (
-        activite_qs
-        .filter(date_acte__year=today.year)
+        activite_annee_courante_qs
         .annotate(mois=ExtractMonth('date_acte'))
         .values('mois')
         .annotate(total=Sum('total_acte'))
     ):
         annee_courante_par_mois[row['mois']] = int(row['total'] or 0)
+
+    annees_actives_par_mois = {mois: 1 for mois in range(1, 13)}
+    for mois in range(1, 13):
+        total_2025 = ACTIVITE_REFERENCE_2025[mois]
+        total_courant = annee_courante_par_mois[mois]
+        if total_courant:
+            annees_actives_par_mois[mois] = 2
+            moyenne_par_mois[mois] = int(round((total_2025 + total_courant) / 2))
+        else:
+            moyenne_par_mois[mois] = total_2025
 
     x_start = 54
     x_step = 612 / 11
@@ -325,9 +317,9 @@ def _activite_annuelle_context(today):
         'activite_annuelle_points_moyenne_plus_10': " ".join(points_moyenne_plus_10),
         'activite_annuelle_points_moyenne_moins_10': " ".join(points_moyenne_moins_10),
         'activite_annuelle_axis': axis,
-        'activite_annees_representees': annees_representees,
-        'activite_annees_exclues': [2005, 2024],
-        'activite_mois_exclus': ['Mars 2025', 'Avril 2025'],
+        'activite_annees_representees': 2,
+        'activite_annees_exclues': [],
+        'activite_mois_exclus': [],
         'activite_annee_courante': today.year,
     }
 
