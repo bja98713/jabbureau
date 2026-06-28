@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from .forms import BibliographieForm, FacturationForm
 from .models import ActiviteFacturation, Bibliographie, Facturation, ParametrageFacturation
-from .views import _activite_annuelle_context, _dashboard_context
+from .views import _activite_annuelle_context, _dashboard_context, _nouveaux_patients_context
 
 
 class BibliographieFormTest(TestCase):
@@ -208,6 +208,111 @@ class DashboardContextTest(TestCase):
 
 		self.assertEqual(context['bordereaux_attente'], 2)
 		self.assertEqual(context['montant_bordereaux_attente'], 100000)
+
+	def test_new_patient_index_counts_first_dn_appearance_by_month(self):
+		Facturation.objects.create(
+			dn='1234567',
+			nom='Dupont',
+			prenom='Jean',
+			date_naissance='1980-01-01',
+			date_acte=date(2026, 1, 10),
+			date_facture=date(2026, 1, 10),
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=100000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='1234567',
+			nom='Dupont',
+			prenom='Jean',
+			date_naissance='1980-01-01',
+			date_acte=date(2026, 2, 10),
+			date_facture=date(2026, 2, 10),
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=100000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='7654321',
+			nom='Martin',
+			prenom='Anne',
+			date_naissance='1981-01-01',
+			date_acte=date(2026, 2, 12),
+			date_facture=date(2026, 2, 12),
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=100000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='2222222',
+			nom='Durand',
+			prenom='Paul',
+			date_naissance='1982-01-01',
+			date_acte=date(2025, 12, 12),
+			date_facture=date(2025, 12, 12),
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=100000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='2222222',
+			nom='Durand',
+			prenom='Paul',
+			date_naissance='1982-01-01',
+			date_acte=date(2026, 3, 12),
+			date_facture=date(2026, 3, 12),
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=100000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='3333333',
+			nom='Bernard',
+			prenom='Luc',
+			date_naissance='1983-01-01',
+			date_acte=date(2025, 12, 20),
+			date_facture=date(2025, 12, 20),
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=100000,
+			statut_dossier='RAS',
+		)
+		Facturation.objects.create(
+			dn='3333333',
+			nom='Bernard',
+			prenom='Luc',
+			date_naissance='1983-01-01',
+			date_acte=date(2026, 2, 20),
+			date_facture=date(2026, 2, 20),
+			regime='Sécurité Sociale',
+			lieu_acte='Cabinet',
+			total_acte=100000,
+			statut_dossier='RAS',
+		)
+
+		context = _nouveaux_patients_context(date(2026, 3, 20))
+		rows = {row['label']: row for row in context['nouveaux_patients_rows']}
+
+		self.assertEqual(rows['Jan']['count'], 1)
+		self.assertEqual(rows['Jan']['consultants_cabinet'], 1)
+		self.assertEqual(rows['Jan']['index_pct'], 100.0)
+		self.assertEqual(rows['Fev']['count'], 1)
+		self.assertEqual(rows['Fev']['consultants_cabinet'], 3)
+		self.assertEqual(rows['Fev']['index_pct'], 33.3)
+		self.assertEqual(rows['Fev']['index_label'], '33.3%')
+		self.assertEqual(rows['Mar']['count'], 0)
+		self.assertEqual(rows['Mar']['consultants_cabinet'], 1)
+		self.assertEqual(rows['Mar']['index_pct'], 0.0)
+		self.assertEqual(context['nouveaux_patients_total_annee'], 2)
+		self.assertEqual(context['nouveaux_patients_mois_courant'], 0)
+		self.assertEqual(context['nouveaux_patients_mois_precedent'], 1)
+		self.assertEqual(context['nouveaux_patients_index_mois_courant'], '0.0%')
+		self.assertEqual(context['nouveaux_patients_index_mois_precedent'], '33.3%')
 
 	def test_annual_activity_chart_uses_activity_table_monthly_average(self):
 		ActiviteFacturation.objects.create(date_acte=date(2005, 1, 10), total_acte=900000)

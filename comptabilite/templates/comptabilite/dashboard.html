@@ -282,6 +282,61 @@
             transparent 13px
         );
     }
+    .new-patient-chart {
+        padding: 1rem;
+    }
+    .new-patient-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 0.55rem;
+        align-items: end;
+        min-height: 190px;
+    }
+    .new-patient-month {
+        display: flex;
+        min-width: 0;
+        height: 170px;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .new-patient-value {
+        color: #1f2933;
+        font-size: 0.78rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+    .new-patient-index {
+        color: #2563eb;
+        font-size: 0.68rem;
+        font-weight: 700;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+    .new-patient-track {
+        display: flex;
+        align-items: flex-end;
+        width: 100%;
+        height: 110px;
+        border-radius: 4px;
+        background: #eef2f7;
+        overflow: hidden;
+    }
+    .new-patient-fill {
+        display: block;
+        width: 100%;
+        min-height: 2px;
+        border-radius: 4px 4px 0 0;
+        background: #2563eb;
+    }
+    .new-patient-fill.future {
+        background: #cbd5e1;
+    }
+    .new-patient-label {
+        color: #667085;
+        font-size: 0.72rem;
+    }
     .empty-state {
         padding: 2rem 1rem;
         color: #667085;
@@ -449,6 +504,38 @@
                     <p class="metric-value">{{ bordereaux_attente|intcomma }}</p>
                     <span class="metric-note">{{ montant_bordereaux_attente|default:"0"|intcomma }} XPF à bordereauter</span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card panel-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="panel-title">Nouveaux patients</h2>
+                <span class="panel-subtitle">Première apparition du DN en {{ nouveaux_patients_annee }}</span>
+            </div>
+            <span class="panel-subtitle">{{ nouveaux_patients_total_annee|intcomma }} nouveau{{ nouveaux_patients_total_annee|pluralize }} patient{{ nouveaux_patients_total_annee|pluralize }}</span>
+        </div>
+        <div class="new-patient-chart">
+            <div class="chart-legend mb-3">
+                <span class="chart-legend-item">Mois courant : <strong>{{ nouveaux_patients_mois_courant|intcomma }}</strong></span>
+                <span class="chart-legend-item">Mois précédent : <strong>{{ nouveaux_patients_mois_precedent|intcomma }}</strong></span>
+                <span class="chart-legend-item">Indice courant : <strong>{{ nouveaux_patients_index_mois_courant }}</strong></span>
+                <span class="chart-legend-item">Indice précédent : <strong>{{ nouveaux_patients_index_mois_precedent }}</strong></span>
+            </div>
+            <div class="new-patient-grid" aria-label="Nouveaux patients par mois">
+                {% for row in nouveaux_patients_rows %}
+                    <div class="new-patient-month">
+                        <span class="new-patient-value">{{ row.count|intcomma }}</span>
+                        <span class="new-patient-index">{{ row.index_label }}</span>
+                        <span class="new-patient-track">
+                            <span class="new-patient-fill {% if not row.current_visible %}future{% endif %}" style="height: {{ row.bar_pct }}%;">
+                                <title>{{ row.count|intcomma }} nouveaux patients / {{ row.consultants_cabinet|intcomma }} consultants cabinet</title>
+                            </span>
+                        </span>
+                        <span class="new-patient-label">{{ row.label }}</span>
+                    </div>
+                {% endfor %}
             </div>
         </div>
     </div>

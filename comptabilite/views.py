@@ -372,6 +372,74 @@ def _activite_annuelle_context(today):
     }
 
 
+def _nouveaux_patients_context(today):
+    mois_labels = ["Jan", "Fev", "Mar", "Avr", "Mai", "Juin", "Jul", "Aou", "Sep", "Oct", "Nov", "Dec"]
+    premiere_date_par_dn = {}
+
+    for row in (
+        Facturation.objects
+        .exclude(dn__isnull=True)
+        .exclude(dn="")
+        .values('dn', 'date_acte')
+        .order_by('dn', 'date_acte')
+    ):
+        dn = (row['dn'] or '').strip()
+        date_acte = row['date_acte']
+        if not dn or not date_acte:
+            continue
+        if dn not in premiere_date_par_dn or date_acte < premiere_date_par_dn[dn]:
+            premiere_date_par_dn[dn] = date_acte
+
+    nouveaux_par_mois = {mois: 0 for mois in range(1, 13)}
+    for first_date in premiere_date_par_dn.values():
+        if first_date.year == today.year:
+            nouveaux_par_mois[first_date.month] += 1
+
+    consultants_cabinet_par_mois = {mois: 0 for mois in range(1, 13)}
+    for row in (
+        Facturation.objects
+        .filter(date_acte__year=today.year, lieu_acte='Cabinet')
+        .exclude(dn__isnull=True)
+        .exclude(dn="")
+        .annotate(mois=ExtractMonth('date_acte'))
+        .values('mois')
+        .annotate(total=Count('dn', distinct=True))
+    ):
+        consultants_cabinet_par_mois[row['mois']] = row['total']
+
+    max_mensuel = max(nouveaux_par_mois.values(), default=0)
+    rows = []
+    cumul = 0
+    for index, label in enumerate(mois_labels):
+        mois = index + 1
+        count = nouveaux_par_mois[mois]
+        consultants = consultants_cabinet_par_mois[mois]
+        index_pct = (count * 100 / consultants) if consultants else 0
+        cumul += count
+        rows.append({
+            'label': label,
+            'mois': mois,
+            'count': count,
+            'consultants_cabinet': consultants,
+            'index_pct': round(index_pct, 1),
+            'index_label': f"{index_pct:.1f}%",
+            'cumul': cumul,
+            'bar_pct': int(round(count * 100 / max_mensuel)) if max_mensuel else 0,
+            'current_visible': mois <= today.month,
+        })
+
+    mois_precedent = today.month - 1 if today.month > 1 else None
+    return {
+        'nouveaux_patients_rows': rows,
+        'nouveaux_patients_total_annee': cumul,
+        'nouveaux_patients_mois_courant': nouveaux_par_mois[today.month],
+        'nouveaux_patients_mois_precedent': nouveaux_par_mois[mois_precedent] if mois_precedent else 0,
+        'nouveaux_patients_index_mois_courant': rows[today.month - 1]['index_label'],
+        'nouveaux_patients_index_mois_precedent': rows[mois_precedent - 1]['index_label'] if mois_precedent else "0.0%",
+        'nouveaux_patients_annee': today.year,
+    }
+
+
 def _dashboard_context():
     today = timezone.localdate()
 
@@ -487,6 +555,7 @@ def _dashboard_context():
         'today': today,
     }
     context.update(_activite_annuelle_context(today))
+    context.update(_nouveaux_patients_context(today))
     return context
 
 
