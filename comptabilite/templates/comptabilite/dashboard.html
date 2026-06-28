@@ -457,7 +457,7 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <div>
                 <h2 class="panel-title">Activité annuelle</h2>
-                <span class="panel-subtitle">Cumul mensuel historique et année {{ activite_annee_courante }} · 2005 et 2024 exclues</span>
+                <span class="panel-subtitle">Cumul mensuel historique et année {{ activite_annee_courante }} · références 2024 et 2025</span>
             </div>
             <span class="panel-subtitle">{{ activite_annees_representees|intcomma }} année{{ activite_annees_representees|pluralize }} représentée{{ activite_annees_representees|pluralize }}</span>
         </div>
@@ -465,28 +465,30 @@
             <div class="chart-legend mb-3">
                 <span class="chart-legend-item"><span class="chart-legend-swatch"></span>Cumul moyenne historique</span>
                 <span class="chart-legend-item"><span class="chart-legend-swatch current"></span>Cumul {{ activite_annee_courante }}</span>
-                <span class="chart-legend-item"><span class="chart-legend-swatch threshold"></span>+/- 10% moyenne</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch threshold"></span>+/- 10%, 20%, 30%, 40% moyenne</span>
             </div>
             <svg viewBox="0 0 720 250" role="img" aria-labelledby="activityChartTitle activityChartDesc">
                 <title id="activityChartTitle">Activité annuelle cumulative</title>
-                <desc id="activityChartDesc">Courbes cumulatives par mois comparant la moyenne historique, l'activité de l'année en cours, et les seuils plus ou moins dix pour cent.</desc>
+                <desc id="activityChartDesc">Courbes cumulatives par mois comparant la moyenne historique, l'activité de l'année en cours, et les seuils plus ou moins dix, vingt, trente et quarante pour cent.</desc>
                 {% for tick in activite_annuelle_axis %}
                     <line class="chart-grid" x1="54" y1="{{ tick.y }}" x2="680" y2="{{ tick.y }}"></line>
                     <text class="chart-axis-label" x="8" y="{{ tick.y }}" dominant-baseline="middle">{{ tick.label }}</text>
                 {% endfor %}
-                <polyline class="chart-line-threshold" points="{{ activite_annuelle_points_moyenne_plus_10 }}"></polyline>
-                <polyline class="chart-line-threshold" points="{{ activite_annuelle_points_moyenne_moins_10 }}"></polyline>
+                {% for seuil in activite_annuelle_seuils %}
+                    <polyline class="chart-line-threshold" points="{{ seuil.points }}">
+                        <title>{{ seuil.label }} moyenne</title>
+                    </polyline>
+                {% endfor %}
                 <polyline class="chart-line-average" points="{{ activite_annuelle_points_moyenne }}"></polyline>
                 {% if activite_annuelle_points_annee %}
                     <polyline class="chart-line-current" points="{{ activite_annuelle_points_annee }}"></polyline>
                 {% endif %}
                 {% for row in activite_annuelle_rows %}
-                    <circle class="chart-dot-threshold" cx="{{ row.x }}" cy="{{ row.moyenne_plus_10_y }}" r="3">
-                        <title>{{ row.label }} - +10% moyenne : {{ row.moyenne_plus_10|intcomma }} XPF</title>
-                    </circle>
-                    <circle class="chart-dot-threshold" cx="{{ row.x }}" cy="{{ row.moyenne_moins_10_y }}" r="3">
-                        <title>{{ row.label }} - -10% moyenne : {{ row.moyenne_moins_10|intcomma }} XPF</title>
-                    </circle>
+                    {% for seuil in row.seuils %}
+                        <circle class="chart-dot-threshold" cx="{{ row.x }}" cy="{{ seuil.y }}" r="3">
+                            <title>{{ row.label }} - {{ seuil.label }} moyenne : {{ seuil.value|intcomma }} XPF</title>
+                        </circle>
+                    {% endfor %}
                     <circle class="chart-dot-average" cx="{{ row.x }}" cy="{{ row.moyenne_y }}" r="4">
                         <title>{{ row.label }} - cumul moyenne : {{ row.moyenne|intcomma }} XPF</title>
                     </circle>
