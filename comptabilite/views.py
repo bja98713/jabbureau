@@ -29,6 +29,8 @@ from django.template.loader import get_template, render_to_string
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.formats import date_format
+from django.utils.http import content_disposition_header
+from django.utils.text import get_valid_filename
 from django.utils.timezone import localtime, now
 from django.utils.translation import activate
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
@@ -2445,6 +2447,22 @@ def courrier_delete(request, pk: int):
     return render(request, 'comptabilite/courrier_confirm_delete.html', {'courrier': c})
 
 
+def _courrier_pdf_title(courrier):
+    """Nom commun à l'aperçu PDF et aux pièces jointes, daté à Tahiti."""
+    type_label = {
+        'FOGD': 'FOGD',
+        'COLO': 'COLOSCOPIE',
+    }.get(courrier.type_courrier, courrier.type_label())
+    parts = [
+        timezone.localdate().strftime('%d-%m-%Y'),
+        courrier.nom,
+        courrier.prenom,
+        courrier.dn,
+        type_label,
+    ]
+    return '-'.join(get_valid_filename(str(part).strip()) for part in parts)
+
+
 @login_required
 def courrier_pdf(request, pk: int):
     c = get_object_or_404(Courrier, pk=pk)
@@ -2456,6 +2474,7 @@ def courrier_pdf(request, pk: int):
     patient.prenom = c.prenom
     patient.date_naissance = c.date_naissance
 
+    pdf_title = _courrier_pdf_title(c)
     template_name = 'comptabilite/courrier_pdf.html'
     if c.type_courrier == 'FOGD':
         template_name = 'comptabilite/courrier_fogd_pdf.html'
@@ -2476,6 +2495,7 @@ def courrier_pdf(request, pk: int):
     html_string = render_to_string(template_name, {
         'patient': patient,
         'courrier': c,
+        'pdf_title': pdf_title,
         'user': request.user,
         'photos': photos,
         'use_file_src': not settings.DEBUG,
@@ -2488,7 +2508,7 @@ def courrier_pdf(request, pk: int):
         stylesheets=[CSS(filename=css_path)]
     )
     response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="courrier_{c.pk}.pdf"'
+    response['Content-Disposition'] = content_disposition_header(False, f'{pdf_title}.pdf')
     return response
 
 
@@ -2536,6 +2556,7 @@ def courrier_send_email(request, pk: int):
                 'default_cc': default_cc,
             })
 
+        pdf_title = _courrier_pdf_title(c)
         # Choix du template PDF identique à l'aperçu PDF
         template_name = 'comptabilite/courrier_pdf.html'
         if c.type_courrier == 'FOGD':
@@ -2556,6 +2577,7 @@ def courrier_send_email(request, pk: int):
         html_string = render_to_string(template_name, {
             'patient': patient,
             'courrier': c,
+            'pdf_title': pdf_title,
             'user': request.user,
             'photos': photos,
             'use_file_src': not settings.DEBUG,
@@ -2574,7 +2596,7 @@ def courrier_send_email(request, pk: int):
         )
         if cc_list:
             email.cc = cc_list
-        email.attach(f"courrier_{c.pk}.pdf", pdf_bytes, 'application/pdf')
+        email.attach(f"{pdf_title}.pdf", pdf_bytes, 'application/pdf')
         safe_send(email)
         # Mémoriser les destinataires utilisés pour ce type de courrier
         try:
