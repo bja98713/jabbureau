@@ -2454,10 +2454,10 @@ def _courrier_pdf_title(courrier):
         'COLO': 'COLOSCOPIE',
     }.get(courrier.type_courrier, courrier.type_label())
     parts = [
-        timezone.localdate().strftime('%d-%m-%Y'),
+        timezone.localdate().strftime('%d%m%Y'),
         courrier.nom,
         courrier.prenom,
-        courrier.dn,
+        courrier.date_naissance.strftime('%d%m%Y') if courrier.date_naissance else 'date-naissance-inconnue',
         type_label,
     ]
     return '-'.join(get_valid_filename(str(part).strip()) for part in parts)
